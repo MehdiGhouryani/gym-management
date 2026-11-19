@@ -1,6 +1,11 @@
-import { EmptyState } from '../../../src/ui/index';
+import { Suspense } from 'react';
+import { Skeleton } from '../../../src/ui/index';
+import { MembersList } from '../../../src/features/members-list';
 
-/** در فاز ۸ با فهرست کامل اعضا و پروفایل جایگزین می‌شود */
-export default function MembersPlaceholder() {
-  return <EmptyState title="فهرست اعضا" hint="این بخش در فاز ۸ تکمیل می‌شود." />;
+export default function MembersPage() {
+  return (
+    <Suspense fallback={<Skeleton height={300} radius={13} />}>
+      <MembersList />
+    </Suspense>
+  );
 }
