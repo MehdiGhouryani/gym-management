@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { Button } from '../../../../src/ui/index';
-import { MemberFields, memberFormToInput, type MemberFormValues } from '../../../../src/features/member-fields';
+import { MemberFields, emptyMemberForm, memberFormToInput, type MemberFormValues } from '../../../../src/features/member-fields';
 import { api, ApiError } from '../../../../src/lib/api';
 import { useSession } from '../../../../src/lib/session';
 import type { Member } from '../../../../src/lib/types';
