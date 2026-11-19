@@ -5,11 +5,14 @@ import {
   HttpStatus,
   Injectable,
   Logger,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { GymStatus, Role } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
 import type { OtpRequestInput, OtpVerifyInput } from '@fulad/shared';
 import { randomUUID } from 'node:crypto';
+import { writeAudit } from '../audit/audit';
 import { getSecrets } from '../config/secrets';
 import { PrismaService } from '../prisma.service';
 import { SmsService } from '../sms/sms.service';
@@ -25,6 +28,7 @@ import {
   verifyOtpHash,
 } from './otp';
 import { ACCESS_TTL_SEC, generateRefreshToken, hashToken, signAccessToken } from './token';
+import type { AccessPayload } from './token';
 
 const BAD_CODE = 'کد نامعتبر یا منقضی است';
 const BAD_SESSION = 'نشست نامعتبر است. دوباره وارد شوید';
@@ -113,6 +117,13 @@ export class AuthService {
 
     const subject = await this.resolveSubject(phone, purpose, gymSlug);
     const tokens = await this.issue(subject, randomUUID());
+    await this.audit(
+      subject.gymId,
+      subject.id,
+      subject.type === 'USER' ? 'auth.login' : 'auth.member_login',
+      `subject:${subject.id}`,
+      { purpose },
+    );
     return { ...tokens, subject: { type: subject.type, role: subject.role ?? null, gymId: subject.gymId, name: subject.name } };
   }
 
@@ -142,13 +153,63 @@ export class AuthService {
     return this.issue(subject, rec.familyId);
   }
 
-  async logout(token: string) {
+  async logout(token?: string) {
+    if (!token) return { ok: true };
     const rec = await this.prisma.refreshToken.findUnique({ where: { tokenHash: hashToken(token) } });
-    if (rec) await this.revokeFamily(rec.familyId);
+    if (!rec) return { ok: true };
+    await this.revokeFamily(rec.familyId);
+    await this.audit(rec.gymId, rec.subjectId, 'auth.logout', `subject:${rec.subjectId}`);
     return { ok: true };
   }
 
+  /** نشست‌های فعالِ همان کاربر/عضو؛ هش توکن هرگز بیرون نمی‌آید */
+  async listSessions(auth: AccessPayload) {
+    const rows = await this.prisma.refreshToken.findMany({
+      where: { subjectType: this.subjectTypeOf(auth), subjectId: auth.sub, revokedAt: null, expiresAt: { gt: new Date() } },
+      select: { id: true, gymId: true, createdAt: true, expiresAt: true },
+      orderBy: { createdAt: 'desc' },
+    });
+    return {
+      items: rows.map((r) => ({ id: r.id, gymId: r.gymId, createdAt: r.createdAt.toISOString(), expiresAt: r.expiresAt.toISOString() })),
+    };
+  }
+
+  async revokeSession(auth: AccessPayload, id: string) {
+    const rec = await this.prisma.refreshToken.findUnique({ where: { id } });
+    if (!rec || rec.subjectId !== auth.sub || rec.subjectType !== this.subjectTypeOf(auth)) {
+      throw new NotFoundException('نشست پیدا نشد');
+    }
+    const n = await this.revokeFamily(rec.familyId);
+    await this.audit(auth.gymId, auth.sub, 'session.revoke', `session:${id}`);
+    return { ok: true, revoked: n.count };
+  }
+
+  async revokeAllSessions(auth: AccessPayload) {
+    const n = await this.prisma.refreshToken.updateMany({
+      where: { subjectType: this.subjectTypeOf(auth), subjectId: auth.sub, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+    await this.audit(auth.gymId, auth.sub, 'session.revoke_all', `subject:${auth.sub}`);
+    return { ok: true, revoked: n.count };
+  }
+
   // ---------- helpers ----------
+  private subjectTypeOf(auth: AccessPayload): 'USER' | 'MEMBER' {
+    return auth.typ === 'user' ? 'USER' : 'MEMBER';
+  }
+
+  /** رویدادهای ورود و نشست در لاگ ممیزی؛ داخل محدوده‌ی RLS باشگاه نوشته می‌شوند */
+  private audit(
+    gymId: string | null,
+    actorId: string,
+    action: string,
+    target?: string,
+    meta?: Prisma.InputJsonValue,
+  ) {
+    if (!gymId) return Promise.resolve();
+    return this.tenant.run(gymId, (tx) => writeAudit(tx, { gymId, actorId, action, target, meta }));
+  }
+
   private revokeFamily(familyId: string) {
     return this.prisma.refreshToken.updateMany({ where: { familyId, revokedAt: null }, data: { revokedAt: new Date() } });
   }

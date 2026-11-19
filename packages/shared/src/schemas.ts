@@ -25,7 +25,8 @@ export const otpVerifySchema = z.object({
   gymSlug: gymSlugSchema,
   code: z.string().regex(/^\d{5}$/),
 });
-export const refreshSchema = z.object({ refreshToken: z.string().min(20).max(200) });
+// refreshToken اختیاری است: اپ آن را در بدنه می‌فرستد، وب از کوکی HttpOnly می‌گیرد
+export const refreshSchema = z.object({ refreshToken: z.string().min(20).max(200).optional() });
 
 // ---------- اعضا ----------
 const textOf = (label: string, min: number, max: number) =>

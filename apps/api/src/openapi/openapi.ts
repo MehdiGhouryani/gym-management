@@ -72,6 +72,12 @@ function componentSchemas(bodies: BodySchemas): Record<string, unknown> {
       subject: obj({ type: str({ enum: ['USER', 'MEMBER'] }), role: nullable('string', { enum: ['OWNER', 'STAFF', null] }), gymId: uuid, name: str() }),
     }),
     Me: obj({ type: str({ enum: ['user', 'member'] }), role: nullable('string'), gymId: uuid }),
+    Session: obj({
+      id: uuid, gymId: nullable('string'),
+      createdAt: dateTime, expiresAt: dateTime,
+    }),
+    SessionsPage: obj({ items: { type: 'array', items: ref('Session') } }),
+    RevokeResult: obj({ ok: { type: 'boolean' }, revoked: int({ description: 'تعداد نشست باطل‌شده' }) }),
     Health: obj({ ok: { type: 'boolean' }, today: date, time: dateTime }),
     Gym: obj({
       id: uuid, slug: str(), name: str(), city: str(), address: nullable('string'), phone: nullable('string'),
@@ -201,15 +207,26 @@ export function buildOpenApi(bodies: BodySchemas) {
   });
   add('post', '/auth/otp/verify', {
     tag: 'ورود', summary: 'تأیید کد و دریافت توکن‌ها', auth: false, body: 'otpVerify',
-    description: 'مدیر فقط وقتی وارد می‌شود که باشگاهش ACTIVE باشد (در انتظار تأیید یا تعلیق: ۴۰۳).',
+    description: 'مدیر فقط وقتی وارد می‌شود که باشگاهش ACTIVE باشد (در انتظار تأیید یا تعلیق: ۴۰۳). درخواست از مرورگر (با Origin): refresh token در کوکی HttpOnly و بدنه فقط accessToken دارد؛ اپ توکن‌ها را در بدنه می‌گیرد.',
     ok: { code: 200, schema: 'VerifyResult', description: 'ورود موفق' }, errors: [400, 401, 403, 429],
   });
   add('post', '/auth/refresh', {
     tag: 'ورود', summary: 'چرخش توکن تمدید', auth: false, body: 'refresh',
-    description: 'هر refresh token یک‌بار مصرف است؛ استفاده‌ی دوباره از توکن چرخیده‌شده کل نشست را باطل می‌کند.',
+    description: 'هر refresh token یک‌بارمصرف است؛ استفاده‌ی دوباره از توکن چرخیده‌شده کل نشست را باطل می‌کند. اپ: refreshToken در بدنه. وب: بدون بدنه، توکن از کوکی HttpOnly خوانده و کوکی جدید ست می‌شود.',
     ok: { code: 200, schema: 'Tokens', description: 'توکن‌های جدید' }, errors: [400, 401, 429],
   });
-  add('post', '/auth/logout', { tag: 'ورود', summary: 'خروج (باطل‌کردن نشست)', auth: false, body: 'refresh', ok: { code: 200, description: 'خارج شد' }, errors: [400] });
+  add('post', '/auth/logout', { tag: 'ورود', summary: 'خروج (باطل‌کردن نشست)', auth: false, body: 'refresh', description: 'اپ: refreshToken در بدنه؛ وب: از کوکی خوانده می‌شود. کوکی همیشه پاک می‌شود.', ok: { code: 200, description: 'خارج شد' }, errors: [400] });
+  add('get', '/auth/sessions', {
+    tag: 'ورود', summary: 'نشست‌های فعال من', description: 'همه‌ی نشست‌های فعال همین کاربر/عضو روی همه‌ی دستگاه‌ها.',
+    ok: { code: 200, schema: 'SessionsPage', description: 'فهرست نشست‌ها' }, errors: AUTHED,
+  });
+  add('delete', '/auth/sessions/{id}', {
+    tag: 'ورود', summary: 'ابطال یک نشست', ok: { code: 200, schema: 'RevokeResult', description: 'باطل شد' }, errors: [...AUTHED, 404],
+  });
+  add('delete', '/auth/sessions', {
+    tag: 'ورود', summary: 'ابطال همه‌ی نشست‌ها', description: 'شامل نشست جاری؛ همه‌ی دستگاه‌ها از حساب خارج می‌شوند.',
+    ok: { code: 200, schema: 'RevokeResult', description: 'همه باطل شدند' }, errors: AUTHED,
+  });
   add('get', '/me', { tag: 'ورود', summary: 'هویت کاربر فعلی از روی توکن', ok: { code: 200, schema: 'Me', description: 'هویت' }, errors: [401] });
 
   add('get', '/members', {
