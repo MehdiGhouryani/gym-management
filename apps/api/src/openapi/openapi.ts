@@ -11,6 +11,8 @@ export interface BodySchemas {
   updatePlan: JsonSchema;
   renew: JsonSchema;
   payDebt: JsonSchema;
+  gymUpdate: JsonSchema;
+  createStaff: JsonSchema;
 }
 
 const BODY_NAMES: Record<keyof BodySchemas, string> = {
@@ -23,6 +25,8 @@ const BODY_NAMES: Record<keyof BodySchemas, string> = {
   updatePlan: 'UpdatePlanBody',
   renew: 'RenewBody',
   payDebt: 'PayDebtBody',
+  gymUpdate: 'GymUpdateBody',
+  createStaff: 'CreateStaffBody',
 };
 
 const ref = (name: string) => ({ $ref: `#/components/schemas/${name}` });
@@ -85,6 +89,12 @@ function componentSchemas(bodies: BodySchemas): Record<string, unknown> {
       expiringDays: int({ description: 'تا چند روز مانده «نزدیک انقضا» حساب شود' }),
       graceDays: int({ description: 'مهلت پیگیری بعد از پایان اشتراک (روز)' }),
     }),
+    GymUser: obj({
+      id: uuid, name: str(), phone: str({ description: '09xxxxxxxxx' }),
+      role: str({ enum: ['OWNER', 'STAFF'] }), createdAt: dateTime,
+    }),
+    GymUsersPage: obj({ items: { type: 'array', items: ref('GymUser') } }),
+    Ok: obj({ ok: { type: 'boolean' } }),
     Member: obj({
       id: uuid, name: str(), phone: str({ description: '09xxxxxxxxx' }), birthDate: nullable('string', { format: 'date' }),
       note: nullable('string'), currentEndsOn: nullable('string', { format: 'date' }),
@@ -228,6 +238,24 @@ export function buildOpenApi(bodies: BodySchemas) {
   add('get', '/gym', {
     tag: 'باشگاه', summary: 'اطلاعات و آستانه‌های باشگاهِ کاربر', description: 'نقش: مدیر و پذیرش. باشگاه از روی توکن تعیین می‌شود.',
     ok: { code: 200, schema: 'Gym', description: 'باشگاه' }, errors: [401, 403, 404],
+  });
+  add('patch', '/gym', {
+    tag: 'باشگاه', summary: 'ویرایش باشگاه (فقط مدیر)', body: 'gymUpdate',
+    description: 'آستانه‌ها: expiringDays بین ۱ تا ۳۰ و graceDays بین ۱ تا ۶۰.',
+    ok: { code: 200, schema: 'Gym', description: 'ویرایش شد' }, errors: [...AUTHED, 400],
+  });
+  add('get', '/gym/users', {
+    tag: 'باشگاه', summary: 'کارکنان باشگاه (فقط مدیر)',
+    ok: { code: 200, schema: 'GymUsersPage', description: 'کارکنان' }, errors: AUTHED,
+  });
+  add('post', '/gym/users', {
+    tag: 'باشگاه', summary: 'افزودن پذیرش (فقط مدیر)', body: 'createStaff',
+    description: 'نقش جدید همیشه STAFF است. شماره تکراری: ۴۰۹ USER_EXISTS. ورود با OTP همان شماره.',
+    ok: { code: 201, schema: 'GymUser', description: 'ساخته شد' }, errors: [...AUTHED, 400, 409],
+  });
+  add('delete', '/gym/users/{id}', {
+    tag: 'باشگاه', summary: 'حذف پذیرش (فقط مدیر)', description: 'نشست‌های او باطل می‌شود. مدیر باشگاه قابل حذف نیست (۴۰۹ OWNER_IMMUTABLE).',
+    ok: { code: 200, schema: 'Ok', description: 'حذف شد' }, errors: [...AUTHED, 404, 409],
   });
 
   add('post', '/auth/otp/request', {

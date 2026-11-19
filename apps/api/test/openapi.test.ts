@@ -13,6 +13,7 @@ const stub = (n: string) => ({ type: 'object', title: n });
 const bodies: BodySchemas = {
   otpRequest: stub('a'), otpVerify: stub('b'), refresh: stub('c'), memberFields: stub('d'), updateMember: stub('e'),
   createPlan: stub('f'), updatePlan: stub('g'), renew: stub('h'), payDebt: stub('i'),
+  gymUpdate: stub('j'), createStaff: stub('k'),
 };
 const doc: any = buildOpenApi(bodies);
 const METHODS = ['get', 'post', 'patch', 'put', 'delete'];

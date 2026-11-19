@@ -63,6 +63,23 @@ export const listMembersQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(30),
 });
 
+// ---------- باشگاه و کارکنان ----------
+export const gymUpdateSchema = z
+  .object({
+    name: textOf('نام باشگاه', 2, 80).optional(),
+    city: textOf('شهر', 2, 40).optional(),
+    address: z.string().trim().max(200).nullable().optional(),
+    phone: phoneSchema.nullable().optional(),
+    expiringDays: z.number().int().min(1).max(30).optional(),
+    graceDays: z.number().int().min(1).max(60).optional(),
+  })
+  .refine((v) => Object.values(v).some((x) => x !== undefined), 'حداقل یک فیلد لازم است');
+
+export const createStaffSchema = z.object({
+  name: textOf('نام', 2, 80),
+  phone: phoneSchema,
+});
+
 // ---------- پلن‌ها ----------
 export const planFieldsSchema = z.object({
   name: textOf('نام پلن', 2, 40),
@@ -126,3 +143,5 @@ export type ReportQuery = z.infer<typeof reportQuerySchema>;
 export type MonthlyReportQuery = z.infer<typeof monthlyReportQuerySchema>;
 export type RenewInput = z.infer<typeof renewSchema>;
 export type PayDebtInput = z.infer<typeof payDebtSchema>;
+export type GymUpdateInput = z.infer<typeof gymUpdateSchema>;
+export type CreateStaffInput = z.infer<typeof createStaffSchema>;
