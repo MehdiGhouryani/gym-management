@@ -1,4 +1,4 @@
-import { toJalali, todayInTehran } from '@fulad/shared';
+import { gregorianToJalali, todayInTehran } from '@fulad/shared';
 
 export interface PaymentRow {
   amount: number;
@@ -20,7 +20,7 @@ export function summarizeRevenue(rows: PaymentRow[]): RevenueSummary {
   for (const r of rows) {
     out.total += r.amount;
     if (r.method === 'CASH' || r.method === 'CARD' || r.method === 'POS') out.byMethod[r.method] += r.amount;
-    const day = toJalali(todayInTehran(r.paidAt)).jd;
+    const day = gregorianToJalali(todayInTehran(r.paidAt)).jd;
     const w = Math.min(3, Math.floor((day - 1) / 7));
     out.weeks[w] = (out.weeks[w] as number) + r.amount;
   }

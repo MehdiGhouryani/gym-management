@@ -1,6 +1,7 @@
 {
   "name": "fulad",
   "private": true,
+  "packageManager": "pnpm@10.34.9",
   "engines": {
     "node": ">=20.12"
   },
@@ -23,5 +24,8 @@
     "turbo": "^2",
     "typescript": "^5",
     "typescript-eslint": "^8"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["@prisma/client", "@prisma/engines", "prisma", "esbuild"]
   }
 }

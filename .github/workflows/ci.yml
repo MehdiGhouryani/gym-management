@@ -17,6 +17,19 @@ jobs:
       - run: sudo -u postgres psql -c "CREATE USER fulad WITH PASSWORD 'fulad' SUPERUSER;" -c "CREATE DATABASE fulad_test OWNER fulad;"
       - run: pnpm install --frozen-lockfile
       - run: pnpm db:generate
+      - run: pnpm db:deploy
+      - name: RLS role, tenant policies and integrity constraints
+        run: |
+          psql "$MIGRATE_DATABASE_URL" -v ON_ERROR_STOP=1 -v app_password=test-only-password -f apps/api/prisma/rls/000_app_role.sql
+          psql "$MIGRATE_DATABASE_URL" -v ON_ERROR_STOP=1 -f apps/api/prisma/rls/001_tenant_rls.sql
+          psql "$MIGRATE_DATABASE_URL" -v ON_ERROR_STOP=1 -f apps/api/prisma/rls/002_integrity.sql
+          if [ -n "$(psql "$MIGRATE_DATABASE_URL" -t -f apps/api/prisma/rls/balance_check.sql)" ]; then
+            echo "balance drift detected"; exit 1
+          fi
+      - name: Cross-tenant RLS leak test on a fresh database
+        run: |
+          psql "$MIGRATE_DATABASE_URL" -v ON_ERROR_STOP=1 -c "CREATE DATABASE fulad_rls_test OWNER fulad;"
+          psql "postgresql://fulad:fulad@localhost:5432/fulad_rls_test" -v ON_ERROR_STOP=1 -f apps/api/prisma/rls/rls.test.sql | grep -q "RLS OK"
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test

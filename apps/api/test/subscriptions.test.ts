@@ -2,8 +2,6 @@ import { describe, it, expect } from 'vitest';
 import { allocatePayment } from '../src/subscriptions/payment-allocation.ts';
 import { summarize, toSubscriptionDto } from '../src/subscriptions/subscription.mapper.ts';
 
-const TODAY = '2026-10-18';
-
 describe('allocatePayment', () => {
   const debts = [
     { subscriptionId: 'a', balance: 500 },

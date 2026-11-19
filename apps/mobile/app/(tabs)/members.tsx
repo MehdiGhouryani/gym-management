@@ -102,7 +102,7 @@ export default function Members() {
         onEndReached={() => {
           if (list.hasNextPage && !list.isFetchingNextPage) void list.fetchNextPage();
         }}
-        ListFooterComponent={list.isFetchingNextPage ? <ActivityIndicator color={c.primary} style={{ padding: 16 }} /> : null}
+        ListFooterComponent={list.isFetchingNextPage ? <ActivityIndicator color={c.primary} style={{ padding: 16 }} /> : undefined}
         ListEmptyComponent={
           list.isPending ? (
             <Loading />

@@ -10,7 +10,6 @@ import { PlansModule } from './plans/plans.module';
 import { ReportsModule } from './reports/reports.module';
 import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 import { PrismaModule } from './prisma.module';
-import { ReportsModule } from './reports/reports.module';
 
 @Module({
   imports: [
