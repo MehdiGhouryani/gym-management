@@ -125,6 +125,15 @@ function componentSchemas(bodies: BodySchemas): Record<string, unknown> {
         items: obj({ id: uuid, amount: int(), method: str({ enum: METHODS }), paidAt: dateTime, memberId: uuid, memberName: str() }),
       },
     }),
+    PaymentRow: obj({
+      id: uuid, amount: int(), method: str({ enum: METHODS }), paidAt: dateTime,
+      memberId: uuid, memberName: str(),
+    }),
+    PaymentsPage: obj({
+      items: { type: 'array', items: ref('PaymentRow') },
+      total: int(), page: int(), limit: int(), pages: int(),
+      sum: int({ description: 'جمع پرداخت‌های دوره‌ی فیلترشده' }),
+    }),
     Dashboard: obj({
       kpis: obj({
         activeMembers: int({ description: 'اعضای بایگانی‌نشده با اشتراک معتبر امروز' }),
@@ -253,6 +262,16 @@ export function buildOpenApi(bodies: BodySchemas) {
   add('get', '/dashboard', {
     tag: 'گزارش', summary: 'داشبورد مدیریتی', description: 'KPIهای ماه جاری، روند ۶ ماه درآمد، مرکز پیگیری و آخرین پرداخت‌ها.',
     ok: { code: 200, schema: 'Dashboard', description: 'داشبورد' }, errors: [...AUTHED],
+  });
+  add('get', '/payments', {
+    tag: 'اشتراک و پرداخت', summary: 'فهرست پرداخت‌های باشگاه', description: 'با بازه‌ی روز تهران (from/to میلادی) و جستجوی نام یا بخشی از شماره؛ sum جمع دوره است.',
+    query: [
+      { name: 'from', schema: date },
+      { name: 'to', schema: date },
+      { name: 'q', schema: str({ maxLength: 80 }), description: 'نام یا بخشی از شماره‌ی موبایل' },
+      ...page,
+    ],
+    ok: { code: 200, schema: 'PaymentsPage', description: 'پرداخت‌ها' }, errors: [...AUTHED, 400],
   });
 
   add('get', '/members', {
