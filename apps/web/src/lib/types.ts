@@ -36,10 +36,16 @@ export interface MemberCounts {
 export interface Plan {
   id: string;
   name: string;
+  kind: 'days' | 'sessions';
   days: number;
+  sessionsCount: number | null;
   price: number;
   active: boolean;
   monthlyPrice: number;
+}
+
+export interface PlanPriceHistory {
+  items: { id: string; price: number; days: number; at: string }[];
 }
 
 export interface Payment {
@@ -53,11 +59,17 @@ export interface Subscription {
   id: string;
   planId: string;
   planName: string | null;
+  planKind: 'days' | 'sessions';
+  sessionsTotal: number | null;
+  sessionsUsed: number | null;
+  sessionsRemaining: number | null;
   startsOn: string;
   endsOn: string;
   price: number;
   paid: number;
   balance: number;
+  frozenDays: number;
+  cancelledAt: string | null;
   payments: Payment[];
   createdAt: string;
 }

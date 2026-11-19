@@ -26,6 +26,11 @@ enum PayMethod {
   POS
 }
 
+enum PlanKind {
+  days
+  sessions
+}
+
 enum ReminderStatus {
   QUEUED
   SENT
@@ -63,6 +68,7 @@ model Gym {
   requests      Request[]
   auditLogs     AuditLog[]
   idempotencyKeys IdempotencyKey[]
+  planPriceHistories PlanPriceHistory[]
 
   @@map("gyms")
 }
@@ -114,10 +120,14 @@ model Plan {
   gymId         String
   gym           Gym            @relation(fields: [gymId], references: [id])
   name          String
+  kind          PlanKind       @default(days)
   days          Int
+  /** فقط برای پلن جلسه‌ای: تعداد جلسه‌های مجاز */
+  sessionsCount Int?
   price         Int
   active        Boolean        @default(true)
   subscriptions Subscription[]
+  priceHistory  PlanPriceHistory[]
 
   // نام یکتا در هر باشگاه (بی‌توجه به بزرگی/کوچکی حروف در سطح سرویس کنترل می‌شود)
   @@unique([gymId, name])
@@ -127,23 +137,43 @@ model Plan {
 }
 
 model Subscription {
-  id        String    @id @default(uuid())
-  gymId     String
-  gym       Gym       @relation(fields: [gymId], references: [id])
-  memberId  String
-  member    Member    @relation(fields: [memberId, gymId], references: [id, gymId])
-  planId    String
-  plan      Plan      @relation(fields: [planId, gymId], references: [id, gymId])
-  startsOn  DateTime  @db.Date
-  endsOn    DateTime  @db.Date
-  price     Int
-  createdAt DateTime  @default(now())
-  payments  Payment[]
+  id           String    @id @default(uuid())
+  gymId        String
+  gym          Gym       @relation(fields: [gymId], references: [id])
+  memberId     String
+  member       Member    @relation(fields: [memberId, gymId], references: [id, gymId])
+  planId       String
+  plan         Plan      @relation(fields: [planId, gymId], references: [id, gymId])
+  startsOn     DateTime  @db.Date
+  endsOn       DateTime  @db.Date
+  price        Int
+  /** جمع روزهای توقف موقت اعمال‌شده روی این اشتراک */
+  frozenDays   Int       @default(0)
+  /** زمان لغو؛ لغو‌شده از محاسبه‌ی پایان عضو و گزارش‌ها کنار می‌رود */
+  cancelledAt  DateTime?
+  /** جلسه‌های مصرف‌شده (پلن جلسه‌ای)؛ با حضور و غیاب فاز ۱۶ کم می‌شود */
+  sessionsUsed Int?
+  createdAt    DateTime  @default(now())
+  payments     Payment[]
 
   @@unique([id, gymId])
   @@index([gymId, endsOn])
   @@index([memberId, endsOn])
   @@map("subscriptions")
+}
+
+model PlanPriceHistory {
+  id      String   @id @default(uuid())
+  gymId   String
+  gym     Gym      @relation(fields: [gymId], references: [id])
+  planId  String
+  plan    Plan     @relation(fields: [planId, gymId], references: [id, gymId])
+  price   Int
+  days    Int
+  at      DateTime @default(now())
+
+  @@index([gymId, planId, at])
+  @@map("plan_price_histories")
 }
 
 model Payment {

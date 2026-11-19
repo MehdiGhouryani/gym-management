@@ -13,6 +13,7 @@ export interface BodySchemas {
   payDebt: JsonSchema;
   gymUpdate: JsonSchema;
   createStaff: JsonSchema;
+  freeze: JsonSchema;
 }
 
 const BODY_NAMES: Record<keyof BodySchemas, string> = {
@@ -27,6 +28,7 @@ const BODY_NAMES: Record<keyof BodySchemas, string> = {
   payDebt: 'PayDebtBody',
   gymUpdate: 'GymUpdateBody',
   createStaff: 'CreateStaffBody',
+  freeze: 'FreezeBody',
 };
 
 const ref = (name: string) => ({ $ref: `#/components/schemas/${name}` });
@@ -52,8 +54,13 @@ function componentSchemas(bodies: BodySchemas): Record<string, unknown> {
   });
   const payment = obj({ id: uuid, amount: int(), method: str({ enum: METHODS }), paidAt: dateTime });
   const subscription = obj({
-    id: uuid, planId: uuid, planName: nullable('string'), startsOn: date, endsOn: date,
+    id: uuid, planId: uuid, planName: nullable('string'),
+    planKind: str({ enum: ['days', 'sessions'] }),
+    sessionsTotal: nullable('integer'), sessionsUsed: nullable('integer'), sessionsRemaining: nullable('integer'),
+    startsOn: date, endsOn: date,
     price: int({ description: 'تومان' }), paid: int(), balance: int(),
+    frozenDays: int({ description: 'جمع روزهای توقف موقت' }),
+    cancelledAt: nullable('string', { format: 'date-time' }),
     payments: { type: 'array', items: ref('Payment') }, createdAt: dateTime,
   });
   return {
@@ -104,7 +111,12 @@ function componentSchemas(bodies: BodySchemas): Record<string, unknown> {
     }),
     MemberPage: obj({ items: { type: 'array', items: ref('Member') }, total: int(), page: int(), limit: int(), pages: int() }),
     MemberCounts: obj({ all: int(), active: int(), expiring: int(), expired: int(), lapsed: int(), none: int(), debtors: int() }),
-    Plan: obj({ id: uuid, name: str(), days: int(), price: int(), active: { type: 'boolean' }, monthlyPrice: int({ description: 'معادل ماهانه (۳۰ روز)' }) }),
+    Plan: obj({
+      id: uuid, name: str(), kind: str({ enum: ['days', 'sessions'] }),
+      days: int(), sessionsCount: nullable('integer', { description: 'فقط پلن جلسه‌ای' }),
+      price: int(), active: { type: 'boolean' }, monthlyPrice: int({ description: 'معادل ماهانه (۳۰ روز)' }),
+    }),
+    PlanPriceHistory: obj({ items: { type: 'array', items: obj({ id: uuid, price: int(), days: int(), at: dateTime }) } }),
     Payment: payment,
     Subscription: subscription,
     SubscriptionHistory: obj({
@@ -338,8 +350,12 @@ export function buildOpenApi(bodies: BodySchemas) {
   add('post', '/plans', { tag: 'پلن‌ها', summary: 'ساخت پلن (فقط مدیر)', body: 'createPlan', ok: { code: 201, schema: 'Plan', description: 'ساخته شد' }, errors: [...AUTHED, 400, 409] });
   add('patch', '/plans/{id}', {
     tag: 'پلن‌ها', summary: 'ویرایش یا غیرفعال‌کردن پلن (فقط مدیر)', body: 'updatePlan',
-    description: 'پلن حذف نمی‌شود. تغییر قیمت یا مدت فقط روی اشتراک‌های بعدی اثر دارد.',
+    description: 'پلن حذف نمی‌شود. تغییر قیمت یا مدت فقط روی اشتراک‌های بعدی اثر دارد و در تاریخچه ثبت می‌شود.',
     ok: { code: 200, schema: 'Plan', description: 'ویرایش شد' }, errors: [...AUTHED, 400, 404, 409],
+  });
+  add('get', '/plans/{id}/history', {
+    tag: 'پلن‌ها', summary: 'تاریخچه قیمت پلن (فقط مدیر)',
+    ok: { code: 200, schema: 'PlanPriceHistory', description: 'تاریخچه' }, errors: AUTHED,
   });
 
   add('get', '/members/{id}/subscriptions', { tag: 'اشتراک و پرداخت', summary: 'تاریخچه‌ی اشتراک‌ها و پرداخت‌ها', ok: { code: 200, schema: 'SubscriptionHistory', description: 'تاریخچه' }, errors: [...AUTHED, 400, 404] });
@@ -360,6 +376,16 @@ export function buildOpenApi(bodies: BodySchemas) {
       description: 'اختیاری؛ همان رفتار تمدید.',
     }],
     ok: { code: 201, schema: 'PayResult', description: 'ثبت شد' }, errors: [...AUTHED, 400, 404, 409],
+  });
+  add('post', '/members/{id}/subscriptions/{subId}/freeze', {
+    tag: 'اشتراک و پرداخت', summary: 'توقف موقت اشتراک (فقط مدیر)', body: 'freeze',
+    description: 'پایان اشتراک به اندازه‌ی روزها کش داده می‌شود؛ هر بار ۱ تا ۳۰ روز و مجموع ۳۰ روز.',
+    ok: { code: 201, schema: 'Subscription', description: 'توقف اعمال شد' }, errors: [...AUTHED, 400, 404, 409],
+  });
+  add('post', '/members/{id}/subscriptions/{subId}/cancel', {
+    tag: 'اشتراک و پرداخت', summary: 'لغو اشتراک (فقط مدیر)',
+    description: 'پایان آینده به امروز کوتاه می‌شود؛ بدهی باقی می‌ماند و بازپرداخت با سند معکوس در هسته مالی انجام می‌شود.',
+    ok: { code: 201, schema: 'Subscription', description: 'لغو شد' }, errors: [...AUTHED, 404, 409],
   });
 
   add('get', '/reports/monthly', {

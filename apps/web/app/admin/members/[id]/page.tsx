@@ -2,7 +2,7 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
-import { Badge, Button, DataTable, Dialog, EmptyState, Skeleton, StatCard, type Column } from '../../../../src/ui/index';
+import { Badge, Button, DataTable, Dialog, EmptyState, Field, Input, Skeleton, StatCard, type Column } from '../../../../src/ui/index';
 import { MemberFields, memberFormFromMember, memberFormToInput, type MemberFormValues } from '../../../../src/features/member-fields';
 import { PayDebtDialog } from '../../../../src/features/pay-debt-dialog';
 import { RenewDialog } from '../../../../src/features/renew-dialog';
@@ -13,8 +13,21 @@ import { faNum, faToman, statusBadge } from '../../../../src/lib/format';
 import { toJalaliString } from '../../../../src/lib/jalali-input';
 import type { Member, Subscription, SubscriptionHistory } from '../../../../src/lib/types';
 
-const subColumns: Column<Subscription>[] = [
-  { key: 'plan', label: 'پلن', render: (s) => s.planName ?? '—' },
+const subColumnsBase: Column<Subscription>[] = [
+  {
+    key: 'plan',
+    label: 'پلن',
+    render: (s) => (
+      <div style={{ display: 'grid' }}>
+        <span>{s.planName ?? '—'}</span>
+        <span style={{ fontSize: 12, color: 'var(--mut)', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {s.planKind === 'sessions' && s.sessionsRemaining !== null ? `${faNum(s.sessionsRemaining)} جلسه باقی` : null}
+          {s.frozenDays > 0 ? `توقف ${faNum(s.frozenDays)} روز` : null}
+          {s.cancelledAt ? 'لغوشده' : null}
+        </span>
+      </div>
+    ),
+  },
   { key: 'period', label: 'بازه', render: (s) => `${toJalaliString(s.startsOn)} تا ${toJalaliString(s.endsOn)}` },
   { key: 'price', label: 'مبلغ', numeric: true, render: (s) => faNum(s.price) },
   { key: 'paid', label: 'پرداخته', numeric: true, render: (s) => faNum(s.paid) },
@@ -43,8 +56,36 @@ export default function MemberProfilePage() {
   const [form, setForm] = useState<MemberFormValues | null>(null);
   const [editErrors, setEditErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
+  const [freezeSub, setFreezeSub] = useState<Subscription | null>(null);
+  const [freezeDays, setFreezeDays] = useState('');
+  const [cancelSub, setCancelSub] = useState<Subscription | null>(null);
 
   const m = member.data;
+
+  const doFreeze = async () => {
+    if (!freezeSub || busy || !m) return;
+    setBusy(true);
+    try {
+      await api.post(`/members/${m.id}/subscriptions/${freezeSub.id}/freeze`, { days: Number(freezeDays) });
+      setFreezeSub(null);
+      setFreezeDays('');
+      refreshAll();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const doCancel = async () => {
+    if (!cancelSub || busy || !m) return;
+    setBusy(true);
+    try {
+      await api.post(`/members/${m.id}/subscriptions/${cancelSub.id}/cancel`);
+      setCancelSub(null);
+      refreshAll();
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const patchInput = useMemo(() => {
     if (!m || !form) return null;
@@ -166,7 +207,30 @@ export default function MemberProfilePage() {
           تاریخچه اشتراک‌ها — جمع {faToman(history.data?.summary.totalPrice ?? 0)}، پرداخته {faToman(history.data?.summary.totalPaid ?? 0)}
         </h2>
         <DataTable
-          columns={subColumns}
+          columns={[
+            ...subColumnsBase,
+            ...(isOwner
+              ? [
+                  {
+                    key: 'actions',
+                    label: 'عملیات',
+                    render: (s: Subscription) =>
+                      s.cancelledAt ? (
+                        <span style={{ fontSize: 12, color: 'var(--mut)' }}>—</span>
+                      ) : (
+                        <span style={{ display: 'inline-flex', gap: 6 }}>
+                          <Button variant="ghost" size="sm" onClick={() => { setFreezeSub(s); setFreezeDays(''); }}>
+                            توقف موقت
+                          </Button>
+                          <Button variant="danger" size="sm" onClick={() => setCancelSub(s)}>
+                            لغو
+                          </Button>
+                        </span>
+                      ),
+                  },
+                ]
+              : []),
+          ]}
           rows={history.data?.items ?? []}
           rowKey={(s) => s.id}
           loading={history.loading}
@@ -223,6 +287,40 @@ export default function MemberProfilePage() {
             تأیید
           </Button>
           <Button variant="ghost" onClick={() => setArchiveOpen(false)}>
+            انصراف
+          </Button>
+        </div>
+      </Dialog>
+
+      <Dialog open={freezeSub !== null} onClose={() => setFreezeSub(null)} title="توقف موقت اشتراک">
+        <div style={{ display: 'grid', gap: 4 }}>
+          <p style={{ fontSize: 13, color: 'var(--mut)', margin: 0 }}>
+            پایان اشتراک به اندازه‌ی روزها کش داده می‌شود. هر بار ۱ تا ۳۰ روز؛ مجموع ۳۰ روز.
+            {freezeSub ? ` پایان فعلی: ${toJalaliString(freezeSub.endsOn)}` : ''}
+          </p>
+          <Field label="تعداد روز" htmlFor="fz-days">
+            <Input id="fz-days" dir="ltr" inputMode="numeric" value={freezeDays} onChange={(e) => setFreezeDays(e.target.value.replace(/\D/g, '').slice(0, 2))} />
+          </Field>
+          <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+            <Button variant="primary" onClick={doFreeze} loading={busy} disabled={Number(freezeDays) < 1 || Number(freezeDays) > 30}>
+              اعمال توقف
+            </Button>
+            <Button variant="ghost" onClick={() => setFreezeSub(null)}>
+              انصراف
+            </Button>
+          </div>
+        </div>
+      </Dialog>
+
+      <Dialog open={cancelSub !== null} onClose={() => setCancelSub(null)} title="لغو اشتراک">
+        <p style={{ color: 'var(--mut)', fontSize: 14 }}>
+          {cancelSub ? `پایان آینده (${toJalaliString(cancelSub.endsOn)}) به امروز کوتاه می‌شود. بدهی باقی می‌ماند و این کار در لاگ ممیزی ثبت می‌شود.` : ''}
+        </p>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <Button variant="danger" onClick={doCancel} loading={busy}>
+            لغو اشتراک
+          </Button>
+          <Button variant="ghost" onClick={() => setCancelSub(null)}>
             انصراف
           </Button>
         </div>

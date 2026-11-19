@@ -27,7 +27,16 @@ export class PlansService {
     const plan = await this.tenant.run(auth.gymId, async (tx) => {
       const dup = await tx.plan.findFirst({ where: { gymId: auth.gymId, name: { equals: input.name, mode: 'insensitive' } } });
       if (dup) throw duplicate();
-      const created = await tx.plan.create({ data: { gymId: auth.gymId, name: input.name, days: input.days, price: input.price } });
+      const created = await tx.plan.create({
+        data: {
+          gymId: auth.gymId,
+          name: input.name,
+          kind: input.kind,
+          days: input.days,
+          sessionsCount: input.sessionsCount ?? null,
+          price: input.price,
+        },
+      });
       await writeAudit(tx, { gymId: auth.gymId, actorId: auth.sub, action: 'plan.create', target: `plan:${created.id}`, meta: { ...input }, ip });
       return created;
     });
@@ -45,15 +54,44 @@ export class PlansService {
         });
         if (dup) throw duplicate();
       }
-      const data: { name?: string; days?: number; price?: number; active?: boolean } = {};
+      const data: {
+        name?: string;
+        days?: number;
+        price?: number;
+        active?: boolean;
+        sessionsCount?: number | null;
+      } = {};
       if (input.name !== undefined) data.name = input.name;
       if (input.days !== undefined) data.days = input.days;
       if (input.price !== undefined) data.price = input.price;
       if (input.active !== undefined) data.active = input.active;
+      if (input.kind !== undefined && input.kind === 'days') data.sessionsCount = null;
+      if (input.sessionsCount !== undefined) data.sessionsCount = input.sessionsCount;
       const updated = await tx.plan.update({ where: { id }, data });
+      // تاریخچه قیمت: فقط وقتی قیمت یا مدت واقعاً تغییر کرد
+      if (data.price !== undefined || data.days !== undefined) {
+        await tx.planPriceHistory.create({
+          data: { gymId: auth.gymId, planId: id, price: updated.price, days: updated.days },
+        });
+      }
       await writeAudit(tx, { gymId: auth.gymId, actorId: auth.sub, action: 'plan.update', target: `plan:${id}`, meta: { ...data }, ip });
       return updated;
     });
     return toPlanDto(plan);
+  }
+
+  /** تاریخچه قیمت پلن (فقط مدیر) */
+  async history(auth: AccessPayload, id: string) {
+    const rows = await this.tenant.run(auth.gymId, (tx) =>
+      tx.planPriceHistory.findMany({
+        where: { gymId: auth.gymId, planId: id },
+        orderBy: { at: 'desc' },
+        take: 50,
+        select: { id: true, price: true, days: true, at: true },
+      }),
+    );
+    return {
+      items: rows.map((r) => ({ id: r.id, price: r.price, days: r.days, at: r.at.toISOString() })),
+    };
   }
 }

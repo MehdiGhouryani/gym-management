@@ -81,13 +81,24 @@ export const createStaffSchema = z.object({
 });
 
 // ---------- پلن‌ها ----------
-export const planFieldsSchema = z.object({
+export const planKindSchema = z.enum(['days', 'sessions']);
+
+// پایه بدون refine تا .partial() کار کند
+const planBase = z.object({
   name: textOf('نام پلن', 2, 40),
+  kind: planKindSchema.default('days'),
   days: z.number().int().min(1).max(3660),
+  /** فقط پلن جلسه‌ای: تعداد جلسه‌های مجاز */
+  sessionsCount: z.number().int().min(1).max(500).optional(),
   price: z.number().int().min(0).max(2_000_000_000),
 });
+
+export const planFieldsSchema = planBase.refine(
+  (v) => (v.kind === 'sessions' ? v.sessionsCount !== undefined : v.sessionsCount === undefined),
+  { message: 'تعداد جلسه فقط برای پلن جلسه‌ای لازم است' },
+);
 export const createPlanSchema = planFieldsSchema;
-export const updatePlanSchema = planFieldsSchema
+export const updatePlanSchema = planBase
   .partial()
   .extend({ active: z.boolean().optional() })
   .refine((v) => Object.values(v).some((x) => x !== undefined), 'حداقل یک فیلد لازم است');
@@ -119,10 +130,15 @@ export const renewSchema = z
     planId: z.uuid(),
     startsOn: dateOnly.optional(),
     price: tomanSchema.optional(),
+    /** تخفیف درصدی فقط برای مدیر؛ با price هم‌زمان پذیرفته نمی‌شود */
+    discountPercent: z.number().int().min(1).max(99).optional(),
     paidAmount: tomanSchema,
     method: payMethodSchema.optional(),
   })
-  .refine((v) => v.paidAmount === 0 || v.method !== undefined, 'روش پرداخت را مشخص کنید');
+  .refine((v) => v.paidAmount === 0 || v.method !== undefined, 'روش پرداخت را مشخص کنید')
+  .refine((v) => v.price === undefined || v.discountPercent === undefined, 'تخفیف درصدی و مبلغ دستی با هم پذیرفته نمی‌شود');
+
+export const freezeSchema = z.object({ days: z.number().int().min(1).max(30) });
 
 /** پرداخت بدهی عضو؛ از قدیمی‌ترین اشتراک بدهکار کم می‌شود */
 export const payDebtSchema = z.object({
@@ -145,3 +161,4 @@ export type RenewInput = z.infer<typeof renewSchema>;
 export type PayDebtInput = z.infer<typeof payDebtSchema>;
 export type GymUpdateInput = z.infer<typeof gymUpdateSchema>;
 export type CreateStaffInput = z.infer<typeof createStaffSchema>;
+export type FreezeInput = z.infer<typeof freezeSchema>;

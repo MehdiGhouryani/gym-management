@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import {
-  createPlanSchema, createStaffSchema, gymUpdateSchema, memberFieldsSchema, otpRequestSchema, otpVerifySchema,
+  createPlanSchema, createStaffSchema, freezeSchema, gymUpdateSchema, memberFieldsSchema, otpRequestSchema, otpVerifySchema,
   payDebtSchema, refreshSchema, renewSchema, updateMemberSchema, updatePlanSchema,
 } from '@fulad/shared';
 import { buildOpenApi } from './openapi';
@@ -25,6 +25,7 @@ export function buildOpenApiDocument() {
     payDebt: toSchema(payDebtSchema),
     gymUpdate: toSchema(gymUpdateSchema),
     createStaff: toSchema(createStaffSchema),
+    freeze: toSchema(freezeSchema),
   };
   return buildOpenApi(bodies);
 }

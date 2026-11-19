@@ -1,13 +1,14 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
-import { planRenewal, todayInTehran } from '@fulad/shared';
-import type { PayDebtInput, RenewInput } from '@fulad/shared';
+import { addDays, planRenewal, todayInTehran } from '@fulad/shared';
+import type { FreezeInput, PayDebtInput, RenewInput } from '@fulad/shared';
 import { writeAudit } from '../audit/audit';
 import type { AccessPayload } from '../auth/token';
 import { fromDateOnly, toDateOnly } from '../common/dates';
 import { IDEMPOTENCY_TTL_MS, decideIdempotency, idempotencyRequestHash } from '../common/idempotency';
 import { TenantService } from '../tenant/tenant.service';
 import { allocatePayment } from './payment-allocation';
+import { cancelledEndsOn, discountPrice, freezeChecks, MAX_FREEZE_TOTAL } from './subscription-v2';
 import { summarize, toSubscriptionDto } from './subscription.mapper';
 
 type Tx = Prisma.TransactionClient;
@@ -109,7 +110,7 @@ export class SubscriptionsService {
     if (!plan) throw new NotFoundException('پلن پیدا نشد');
     if (!plan.active) throw new ConflictException({ message: 'این پلن غیرفعال است', code: 'PLAN_INACTIVE' });
 
-    const price = input.price ?? plan.price;
+    const price = input.price ?? (input.discountPercent !== undefined ? discountPrice(plan.price, input.discountPercent) : plan.price);
     if (price !== plan.price && auth.role !== 'OWNER') {
       throw new ForbiddenException('فقط مدیر باشگاه می‌تواند مبلغ اشتراک را تغییر دهد');
     }
@@ -136,6 +137,7 @@ export class SubscriptionsService {
         startsOn: fromDateOnly(r.startsOn),
         endsOn: fromDateOnly(r.endsOn),
         price,
+        sessionsUsed: plan.kind === 'sessions' ? 0 : null,
       },
     });
     if (input.paidAmount > 0 && input.method) {
@@ -156,7 +158,7 @@ export class SubscriptionsService {
 
     const full = await tx.subscription.findUniqueOrThrow({
       where: { id: sub.id },
-      include: { plan: { select: { name: true } }, payments: { orderBy: { paidAt: 'desc' } } },
+      include: { plan: { select: { name: true, kind: true, sessionsCount: true } }, payments: { orderBy: { paidAt: 'desc' } } },
     });
     return { subscription: toSubscriptionDto(full), member: { id: memberId, currentEndsOn: r.endsOn, balance } };
   }
@@ -195,6 +197,91 @@ export class SubscriptionsService {
     return { allocations, balance };
   }
 
+  /** توقف موقت اشتراک: پایان اشتراک کش داده می‌شود (فقط مدیر، حداکثر ۳۰ روز مجموع) */
+  async freeze(auth: AccessPayload, memberId: string, subId: string, input: FreezeInput, ip?: string) {
+    const today = todayInTehran();
+    return this.tenant.run(auth.gymId, async (tx) => {
+      await this.lockMember(tx, auth.gymId, memberId);
+      const sub = await tx.subscription.findFirst({ where: { id: subId, gymId: auth.gymId, memberId } });
+      if (!sub) throw new NotFoundException('اشتراک پیدا نشد');
+      const check = freezeChecks({
+        days: input.days,
+        frozenDays: sub.frozenDays,
+        endsOn: toDateOnly(sub.endsOn),
+        today,
+        cancelled: sub.cancelledAt !== null,
+      });
+      if (!check.ok) {
+        const msg =
+          check.reason === 'TOTAL'
+            ? `مجموع توقف موقت نمی‌تواند از ${MAX_FREEZE_TOTAL} روز بیشتر شود`
+            : check.reason === 'PAST'
+              ? 'اشتراک منقضی قابل توقف نیست'
+              : 'اشتراک لغوشده قابل توقف نیست';
+        throw new ConflictException({ message: msg, code: `FREEZE_${check.reason}` });
+      }
+      const newEndsOn = addDays(toDateOnly(sub.endsOn), input.days);
+      await tx.subscription.update({
+        where: { id: sub.id },
+        data: { endsOn: fromDateOnly(newEndsOn), frozenDays: { increment: input.days } },
+      });
+      await this.recomputeMemberEndsOn(tx, auth.gymId, memberId);
+      await writeAudit(tx, {
+        gymId: auth.gymId,
+        actorId: auth.sub,
+        action: 'subscription.freeze',
+        target: `subscription:${sub.id}`,
+        meta: { days: input.days, newEndsOn },
+        ip,
+      });
+      const full = await tx.subscription.findUniqueOrThrow({
+        where: { id: sub.id },
+        include: { plan: { select: { name: true, kind: true, sessionsCount: true } }, payments: { orderBy: { paidAt: 'desc' } } },
+      });
+      return toSubscriptionDto(full);
+    });
+  }
+
+  /** لغو اشتراک: اگر پایان آینده دارد، امروز تمام می‌شود؛ بدهی باقی می‌ماند (بازپرداخت با هسته مالی) */
+  async cancel(auth: AccessPayload, memberId: string, subId: string, ip?: string) {
+    const today = todayInTehran();
+    return this.tenant.run(auth.gymId, async (tx) => {
+      await this.lockMember(tx, auth.gymId, memberId);
+      const sub = await tx.subscription.findFirst({ where: { id: subId, gymId: auth.gymId, memberId } });
+      if (!sub) throw new NotFoundException('اشتراک پیدا نشد');
+      if (sub.cancelledAt) throw new ConflictException({ message: 'این اشتراک قبلاً لغو شده است', code: 'ALREADY_CANCELLED' });
+      const endsOn = cancelledEndsOn(toDateOnly(sub.endsOn), today);
+      await tx.subscription.update({
+        where: { id: sub.id },
+        data: { cancelledAt: new Date(), endsOn: fromDateOnly(endsOn) },
+      });
+      await this.recomputeMemberEndsOn(tx, auth.gymId, memberId);
+      await writeAudit(tx, {
+        gymId: auth.gymId,
+        actorId: auth.sub,
+        action: 'subscription.cancel',
+        target: `subscription:${sub.id}`,
+        meta: { endsOn },
+        ip,
+      });
+      const full = await tx.subscription.findUniqueOrThrow({
+        where: { id: sub.id },
+        include: { plan: { select: { name: true, kind: true, sessionsCount: true } }, payments: { orderBy: { paidAt: 'desc' } } },
+      });
+      return toSubscriptionDto(full);
+    });
+  }
+
+  /** پایان معتبر عضو = دیرترین پایان اشتراک‌های لغو‌نشده؛ بعد از هر تغییر ساختاری دوباره حساب می‌شود */
+  private async recomputeMemberEndsOn(tx: Tx, gymId: string, memberId: string) {
+    const latest = await tx.subscription.findFirst({
+      where: { gymId, memberId, cancelledAt: null },
+      orderBy: { endsOn: 'desc' },
+      select: { endsOn: true },
+    });
+    await tx.member.update({ where: { id: memberId }, data: { currentEndsOn: latest ? latest.endsOn : null } });
+  }
+
   async history(auth: AccessPayload, memberId: string) {
     return this.tenant.run(auth.gymId, async (tx) => {
       const member = await tx.member.findFirst({
@@ -203,7 +290,7 @@ export class SubscriptionsService {
       if (!member) throw new NotFoundException('عضو پیدا نشد');
       const rows = await tx.subscription.findMany({
         where: { gymId: auth.gymId, memberId },
-        include: { plan: { select: { name: true } }, payments: { orderBy: { paidAt: 'desc' } } },
+        include: { plan: { select: { name: true, kind: true, sessionsCount: true } }, payments: { orderBy: { paidAt: 'desc' } } },
         orderBy: [{ startsOn: 'desc' }, { createdAt: 'desc' }],
       });
       const items = rows.map(toSubscriptionDto);

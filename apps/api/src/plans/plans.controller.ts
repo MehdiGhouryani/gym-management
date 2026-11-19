@@ -34,4 +34,10 @@ export class PlansController {
   ) {
     return this.plans.update(auth, id, body, ip);
   }
+
+  @Get(':id/history')
+  @Roles('OWNER')
+  history(@CurrentAuth() auth: AccessPayload, @Param('id', ParseUUIDPipe) id: string) {
+    return this.plans.history(auth, id);
+  }
 }

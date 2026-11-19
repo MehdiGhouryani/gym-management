@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Headers, Ip, Param, ParseUUIDPipe, Post, UseGuards } from '@nestjs/common';
-import { payDebtSchema, renewSchema } from '@fulad/shared';
-import type { PayDebtInput, RenewInput } from '@fulad/shared';
+import { freezeSchema, payDebtSchema, renewSchema } from '@fulad/shared';
+import type { FreezeInput, PayDebtInput, RenewInput } from '@fulad/shared';
 import { AuthGuard } from '../auth/auth.guard';
 import { CurrentAuth, Roles, RolesGuard } from '../auth/roles';
 import type { AccessPayload } from '../auth/token';
@@ -44,5 +44,28 @@ export class SubscriptionsController {
     @Headers('idempotency-key') idempotencyKey?: string,
   ) {
     return this.subs.payDebt(auth, id, body, ip, idempotencyKeyOf(idempotencyKey));
+  }
+
+  @Post('subscriptions/:subId/freeze')
+  @Roles('OWNER')
+  freeze(
+    @CurrentAuth() auth: AccessPayload,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('subId', ParseUUIDPipe) subId: string,
+    @Body(new ZodPipe(freezeSchema)) body: FreezeInput,
+    @Ip() ip: string,
+  ) {
+    return this.subs.freeze(auth, id, subId, body, ip);
+  }
+
+  @Post('subscriptions/:subId/cancel')
+  @Roles('OWNER')
+  cancel(
+    @CurrentAuth() auth: AccessPayload,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('subId', ParseUUIDPipe) subId: string,
+    @Ip() ip: string,
+  ) {
+    return this.subs.cancel(auth, id, subId, ip);
   }
 }

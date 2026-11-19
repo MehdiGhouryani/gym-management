@@ -27,6 +27,7 @@ export function RenewDialog({ open, onClose, memberId, memberName, currentEndsOn
   const [planId, setPlanId] = useState('');
   const [paid, setPaid] = useState('');
   const [price, setPrice] = useState('');
+  const [discount, setDiscount] = useState('');
   const [method, setMethod] = useState('');
   const [startsOn, setStartsOn] = useState('');
   const [busy, setBusy] = useState(false);
@@ -53,6 +54,7 @@ export function RenewDialog({ open, onClose, memberId, memberName, currentEndsOn
     setPlanId('');
     setPaid('');
     setPrice('');
+    setDiscount('');
     setMethod('');
     setStartsOn('');
     setError(null);
@@ -70,6 +72,7 @@ export function RenewDialog({ open, onClose, memberId, memberName, currentEndsOn
           paidAmount: paidNum,
           method: paidNum > 0 ? method : undefined,
           ...(canSetPrice && priceNum !== null && priceNum !== plan.price ? { price: priceNum } : {}),
+          ...(canSetPrice && !price.trim() && discount.trim() ? { discountPercent: Number(discount) } : {}),
           ...(startsIso ? { startsOn: startsIso } : {}),
         },
         { 'idempotency-key': crypto.randomUUID() },
@@ -142,9 +145,14 @@ export function RenewDialog({ open, onClose, memberId, memberName, currentEndsOn
             <p style={{ fontSize: 12, color: 'var(--wn)' }}>پرداخت صفر یعنی بدهی — بعداً از «پرداخت بدهی» تسویه کنید.</p>
           )}
           {canSetPrice ? (
-            <Field label="مبلغ اشتراک (تخفیف مدیر، اختیاری)" htmlFor="r-price" hint={plan ? `قیمت پلن: ${faToman(plan.price)}` : undefined}>
-              <Input id="r-price" dir="ltr" inputMode="numeric" placeholder={plan ? String(plan.price) : ''} value={price} onChange={(e) => setPrice(e.target.value.replace(/\D/g, ''))} />
-            </Field>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              <Field label="مبلغ دستی (تومان)" htmlFor="r-price" hint={plan ? `قیمت پلن: ${faToman(plan.price)}` : undefined}>
+                <Input id="r-price" dir="ltr" inputMode="numeric" placeholder={plan ? String(plan.price) : ''} value={price} onChange={(e) => { setPrice(e.target.value.replace(/\D/g, '')); setDiscount(''); }} />
+              </Field>
+              <Field label="یا تخفیف درصدی (۱–۹۹)" htmlFor="r-disc">
+                <Input id="r-disc" dir="ltr" inputMode="numeric" placeholder="مثلاً ۱۵" value={discount} onChange={(e) => { setDiscount(e.target.value.replace(/\D/g, '').slice(0, 2)); setPrice(''); }} />
+              </Field>
+            </div>
           ) : null}
           <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
             <Button variant="primary" onClick={submit} loading={busy} disabled={invalid || !plan}>

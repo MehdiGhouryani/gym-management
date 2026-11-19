@@ -1,7 +1,9 @@
 export interface PlanRow {
   id: string;
   name: string;
+  kind: 'days' | 'sessions';
   days: number;
+  sessionsCount: number | null;
   price: number;
   active: boolean;
 }
@@ -12,7 +14,9 @@ export const planMonthly = (price: number, days: number): number => Math.round((
 export const toPlanDto = (p: PlanRow) => ({
   id: p.id,
   name: p.name,
+  kind: p.kind,
   days: p.days,
+  sessionsCount: p.sessionsCount,
   price: p.price,
   active: p.active,
   monthlyPrice: planMonthly(p.price, p.days),
