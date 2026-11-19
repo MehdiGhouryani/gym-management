@@ -1,4 +1,4 @@
-import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from 'react';
+import type { ComponentPropsWithRef, ReactNode } from 'react';
 
 type FieldState = 'default' | 'error' | 'success';
 
@@ -28,15 +28,15 @@ function stateClass(state: FieldState) {
   return state === 'error' ? ' u-input--error' : state === 'success' ? ' u-input--success' : '';
 }
 
-export function Input({ state = 'default', ...rest }: InputHTMLAttributes<HTMLInputElement> & { state?: FieldState }) {
+export function Input({ state = 'default', ...rest }: ComponentPropsWithRef<'input'> & { state?: FieldState }) {
   return <input {...rest} className={`u-input${stateClass(state)} ${rest.className ?? ''}`.trim()} />;
 }
 
-export function Textarea({ state = 'default', ...rest }: TextareaHTMLAttributes<HTMLTextAreaElement> & { state?: FieldState }) {
+export function Textarea({ state = 'default', ...rest }: ComponentPropsWithRef<'textarea'> & { state?: FieldState }) {
   return <textarea {...rest} className={`u-input${stateClass(state)} ${rest.className ?? ''}`.trim()} />;
 }
 
-export function Select({ state = 'default', children, ...rest }: SelectHTMLAttributes<HTMLSelectElement> & { state?: FieldState }) {
+export function Select({ state = 'default', children, ...rest }: ComponentPropsWithRef<'select'> & { state?: FieldState }) {
   return (
     <select {...rest} className={`u-input${stateClass(state)} ${rest.className ?? ''}`.trim()}>
       {children}
