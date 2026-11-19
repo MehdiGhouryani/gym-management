@@ -19,3 +19,19 @@ export const space = { xs: 4, sm: 8, md: 12, lg: 16, xl: 22, xxl: 32 } as const;
 /** حداقل اندازه‌ی هدف لمسی (پیکسل) */
 export const touchTarget = 44;
 export const fontFamily = 'Vazirmatn';
+
+/** حرکت: کوتاه، هدفمند و کنترل‌شده */
+export const motion = {
+  fastMs: 120, baseMs: 180, slowMs: 260,
+  ease: 'cubic-bezier(.2,.8,.2,1)',
+} as const;
+
+/** سایه‌ها به‌صورت رشته‌ی CSS؛ برای موبایل از Shadow-Elevation معادل استفاده شود */
+export const shadow = {
+  sm: '0 1px 2px rgba(21,35,30,.08)', md: '0 4px 14px rgba(21,35,30,.10)', lg: '0 14px 40px rgba(21,35,30,.16)',
+} as const;
+
+export const breakpoints = { sm: 640, md: 768, lg: 1024, xl: 1280 } as const;
+
+/** لایه‌بندی: هرچه پایین‌تر در فهرست، بالاتر روی صفحه */
+export const z = { sticky: 20, overlay: 30, modal: 40, toast: 50 } as const;

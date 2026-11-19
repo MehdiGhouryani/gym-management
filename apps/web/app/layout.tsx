@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import '@fulad/ui-tokens/tokens.css';
+import '../src/ui/ui.css';
 import './globals.css';
 
 export const metadata: Metadata = { title: 'فولاد' };

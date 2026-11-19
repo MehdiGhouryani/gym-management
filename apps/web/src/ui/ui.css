@@ -1,0 +1,131 @@
+/* کیت UI وب؛ فقط توکن‌های ui-tokens — هیچ رنگ/سایه‌ی بیرونی */
+
+/* ---------- دکمه ---------- */
+.u-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  border: 1px solid transparent; border-radius: 13px; cursor: pointer;
+  font: inherit; font-weight: 700; padding: 9px 16px; min-height: 40px;
+  transition: background var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), opacity var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
+}
+.u-btn:active:not(:disabled) { transform: translateY(1px); }
+.u-btn:disabled { opacity: .55; cursor: not-allowed; }
+.u-btn:focus-visible { outline: 2px solid var(--pr); outline-offset: 2px; }
+.u-btn--md { font-size: 14px; }
+.u-btn--sm { font-size: 12px; padding: 5px 10px; min-height: 30px; border-radius: 8px; }
+.u-btn--primary { background: var(--pr); color: #fff; }
+.u-btn--primary:hover:not(:disabled):not(.u-btn--loading) { background: color-mix(in srgb, var(--pr) 88%, #000); }
+.u-btn--tint { background: var(--tint); color: var(--pr); }
+.u-btn--tint:hover:not(:disabled):not(.u-btn--loading) { background: color-mix(in srgb, var(--tint) 80%, var(--pr)); }
+.u-btn--ghost { background: transparent; color: var(--ink); border-color: var(--line); }
+.u-btn--ghost:hover:not(:disabled):not(.u-btn--loading) { background: var(--tint); color: var(--pr); }
+.u-btn--danger { background: var(--bd); color: #fff; }
+.u-btn--danger:hover:not(:disabled):not(.u-btn--loading) { background: color-mix(in srgb, var(--bd) 88%, #000); }
+.u-btn--loading { pointer-events: none; }
+.u-btn--error { box-shadow: 0 0 0 2px var(--bdt); }
+.u-btn--success { box-shadow: 0 0 0 2px var(--okt); }
+.u-spin { width: 14px; height: 14px; border: 2px solid color-mix(in srgb, currentColor 30%, transparent); border-top-color: currentColor; border-radius: 50%; animation: u-spin .7s linear infinite; }
+@keyframes u-spin { to { transform: rotate(360deg); } }
+
+/* ---------- فیلد ---------- */
+.u-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+.u-label { font-size: 13px; font-weight: 700; color: var(--mut); }
+.u-input {
+  font: inherit; color: var(--ink); background: var(--card); border: 1px solid var(--line);
+  border-radius: 10px; padding: 9px 12px; min-height: 42px; width: 100%;
+  transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
+}
+.u-input::placeholder { color: color-mix(in srgb, var(--mut) 70%, transparent); }
+.u-input:hover:not(:disabled):not(:focus) { border-color: color-mix(in srgb, var(--line) 60%, var(--mut)); }
+.u-input:focus { outline: none; border-color: var(--pr); box-shadow: 0 0 0 3px var(--tint); }
+.u-input:disabled { opacity: .6; cursor: not-allowed; background: color-mix(in srgb, var(--card) 60%, var(--bg)); }
+.u-input--error { border-color: var(--bd); }
+.u-input--error:focus { box-shadow: 0 0 0 3px var(--bdt); }
+.u-input--success { border-color: var(--ok); }
+.u-input--success:focus { box-shadow: 0 0 0 3px var(--okt); }
+textarea.u-input { min-height: 84px; resize: vertical; }
+select.u-input { appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--mut) 50%), linear-gradient(135deg, var(--mut) 50%, transparent 50%); background-position: calc(12px + 4px) center, calc(12px) center; background-size: 4px 4px; background-repeat: no-repeat; padding-left: 28px; }
+.u-hint { font-size: 12px; color: var(--mut); }
+.u-hint--error { color: var(--bd); }
+.u-hint--success { color: var(--ok); }
+
+/* ---------- نشان ---------- */
+.u-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; white-space: nowrap; }
+.u-badge--ok { background: var(--okt); color: var(--ok); }
+.u-badge--wn { background: var(--wnt); color: var(--wn); }
+.u-badge--bad { background: var(--bdt); color: var(--bd); }
+.u-badge--debt { background: var(--dtt); color: var(--dt); }
+.u-badge--tint { background: var(--tint); color: var(--pr); }
+.u-badge--neutral { background: transparent; color: var(--mut); border: 1px solid var(--line); }
+
+/* ---------- کارت آمار ---------- */
+.u-stat { background: var(--card); border: 1px solid var(--line); border-radius: 13px; padding: 14px 16px; box-shadow: var(--shadow-sm); }
+.u-stat-label { font-size: 12px; color: var(--mut); font-weight: 700; }
+.u-stat-value { font-size: 24px; font-weight: 700; margin-top: 4px; font-variant-numeric: tabular-nums; }
+.u-stat-hint { font-size: 12px; color: var(--mut); margin-top: 4px; }
+.u-stat-delta { font-size: 12px; font-weight: 700; margin-top: 6px; display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; }
+.u-stat-delta--good { background: var(--okt); color: var(--ok); }
+.u-stat-delta--bad { background: var(--bdt); color: var(--bd); }
+
+/* ---------- جدول ---------- */
+.u-table-wrap { background: var(--card); border: 1px solid var(--line); border-radius: 13px; overflow: hidden; }
+.u-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.u-table th { text-align: right; font-size: 12px; color: var(--mut); background: color-mix(in srgb, var(--tint) 45%, var(--card)); padding: 10px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.u-table td { padding: 10px 12px; border-bottom: 1px solid color-mix(in srgb, var(--line) 55%, transparent); }
+.u-table tr:last-child td { border-bottom: none; }
+.u-table tbody tr { transition: background var(--dur-fast) var(--ease); }
+.u-table tbody tr:hover { background: color-mix(in srgb, var(--tint) 30%, transparent); }
+.u-table-num { font-variant-numeric: tabular-nums; }
+/* موبایل: جدول به کارت تبدیل می‌شود */
+@media (max-width: 640px) {
+  .u-table thead { display: none; }
+  .u-table, .u-table tbody, .u-table tr, .u-table td { display: block; width: 100%; }
+  .u-table tr { border-bottom: 1px solid var(--line); padding: 6px 0; }
+  .u-table td { display: flex; justify-content: space-between; gap: 12px; border: none; padding: 5px 12px; }
+  .u-table td::before { content: attr(data-label); color: var(--mut); font-size: 12px; font-weight: 700; }
+}
+
+/* ---------- اسکلت و حالت‌ها ---------- */
+.u-skeleton { background: linear-gradient(90deg, var(--line) 25%, color-mix(in srgb, var(--line) 50%, var(--card)) 50%, var(--line) 75%); background-size: 200% 100%; animation: u-shimmer 1.4s ease infinite; border-radius: 8px; }
+@keyframes u-shimmer { to { background-position: -200% 0; } }
+.u-empty { text-align: center; padding: 40px 16px; }
+.u-empty-title { font-weight: 700; margin: 0 0 6px; }
+.u-empty-hint { color: var(--mut); font-size: 13px; margin: 0 0 14px; }
+
+/* ---------- لایه و دیالوگ ---------- */
+.u-overlay { position: fixed; inset: 0; background: rgba(15, 21, 18, .5); z-index: var(--z-overlay); display: flex; align-items: center; justify-content: center; padding: 20px; animation: u-fade var(--dur) var(--ease); }
+.u-overlay--end { align-items: stretch; justify-content: flex-end; padding: 0; }
+.u-overlay--start { align-items: stretch; justify-content: flex-start; padding: 0; }
+.u-panel { background: var(--card); border-radius: 22px; box-shadow: var(--shadow-lg); width: min(480px, 100%); max-height: calc(100vh - 60px); overflow: auto; padding: 20px; animation: u-pop var(--dur) var(--ease); }
+.u-panel--drawer { border-radius: 0; width: min(420px, 90vw); height: 100%; max-height: none; animation: u-slide var(--dur-slow) var(--ease); }
+.u-panel-title { font-size: 16px; font-weight: 700; margin: 0 0 14px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.u-panel-close { background: transparent; border: none; cursor: pointer; color: var(--mut); font-size: 20px; line-height: 1; padding: 4px; border-radius: 8px; }
+.u-panel-close:hover { background: var(--tint); color: var(--ink); }
+@keyframes u-fade { from { opacity: 0; } }
+@keyframes u-pop { from { opacity: 0; transform: translateY(8px) scale(.98); } }
+@keyframes u-slide { from { transform: translateX(var(--u-slide-from, -40px)); opacity: .5; } }
+[dir='rtl'] .u-overlay--end .u-panel--drawer { --u-slide-from: 40px; }
+[dir='rtl'] .u-overlay--start .u-panel--drawer { --u-slide-from: -40px; }
+
+/* ---------- تب ---------- */
+.u-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); overflow-x: auto; }
+.u-tab { background: none; border: none; cursor: pointer; font: inherit; font-weight: 700; font-size: 14px; color: var(--mut); padding: 10px 14px; border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; transition: color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease); }
+.u-tab:hover { color: var(--ink); }
+.u-tab[aria-selected='true'] { color: var(--pr); border-bottom-color: var(--pr); }
+.u-tab:focus-visible { outline: 2px solid var(--pr); outline-offset: -2px; border-radius: 8px; }
+.u-tab-count { background: var(--tint); color: var(--pr); font-size: 11px; padding: 1px 7px; border-radius: 999px; margin-inline-start: 6px; }
+
+/* ---------- صفحه‌بندی ---------- */
+.u-pagination { display: flex; gap: 6px; align-items: center; justify-content: center; padding: 12px 0; }
+.u-page-btn { min-width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); color: var(--ink); cursor: pointer; font: inherit; font-size: 13px; font-variant-numeric: tabular-nums; transition: background var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease); }
+.u-page-btn:hover:not(:disabled):not([aria-current='page']) { background: var(--tint); }
+.u-page-btn[aria-current='page'] { background: var(--pr); border-color: var(--pr); color: #fff; font-weight: 700; }
+.u-page-btn:disabled { opacity: .45; cursor: not-allowed; }
+.u-page-info { font-size: 12px; color: var(--mut); margin-inline: 8px; font-variant-numeric: tabular-nums; }
+
+/* ---------- توست ---------- */
+.u-toasts { position: fixed; top: 16px; inset-inline: 0; display: flex; flex-direction: column; align-items: center; gap: 8px; z-index: var(--z-toast); pointer-events: none; }
+.u-toast { pointer-events: auto; background: var(--card); color: var(--ink); border: 1px solid var(--line); border-inline-start: 4px solid var(--mut); border-radius: 13px; box-shadow: var(--shadow-md); padding: 10px 16px; font-size: 14px; font-weight: 700; max-width: min(420px, 90vw); animation: u-toast-in var(--dur) var(--ease); }
+.u-toast--ok { border-inline-start-color: var(--ok); }
+.u-toast--bad { border-inline-start-color: var(--bd); }
+.u-toast--wn { border-inline-start-color: var(--sig); }
+@keyframes u-toast-in { from { opacity: 0; transform: translateY(-10px); } }
