@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Headers, Ip, Param, ParseUUIDPipe, Post, UseGuards } from '@nestjs/common';
-import { freezeSchema, payDebtSchema, renewSchema } from '@fulad/shared';
-import type { FreezeInput, PayDebtInput, RenewInput } from '@fulad/shared';
+import { freezeSchema, payDebtSchema, refundSchema, renewSchema } from '@fulad/shared';
+import type { FreezeInput, PayDebtInput, RefundInput, RenewInput } from '@fulad/shared';
 import { AuthGuard } from '../auth/auth.guard';
 import { CurrentAuth, Roles, RolesGuard } from '../auth/roles';
 import type { AccessPayload } from '../auth/token';
@@ -44,6 +44,17 @@ export class SubscriptionsController {
     @Headers('idempotency-key') idempotencyKey?: string,
   ) {
     return this.subs.payDebt(auth, id, body, ip, idempotencyKeyOf(idempotencyKey));
+  }
+
+  @Post('refunds')
+  @Roles('OWNER')
+  refund(
+    @CurrentAuth() auth: AccessPayload,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body(new ZodPipe(refundSchema)) body: RefundInput,
+    @Ip() ip: string,
+  ) {
+    return this.subs.refund(auth, id, body, ip);
   }
 
   @Post('subscriptions/:subId/freeze')

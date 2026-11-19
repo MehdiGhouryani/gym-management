@@ -42,8 +42,11 @@ export class DashboardService {
         where: { gymId, paidAt: { gte: winStart, lt: winEnd } },
         select: { amount: true, method: true, paidAt: true },
       });
-      const followUpList = (status: 'expiring' | 'expired') =>
-        tx.member.findMany({
+      const refunds = await tx.refund.findMany({
+        where: { gymId, refundedAt: { gte: winStart, lt: winEnd } },
+        select: { amount: true, method: true, refundedAt: true },
+      });
+      const followUpList = (status: 'expiring' | 'expired') =>        tx.member.findMany({
           where: { gymId, archivedAt: null, ...endsOnWhere(status, today, opts) },
           orderBy: { currentEndsOn: 'asc' },
           take: 5,
@@ -54,12 +57,13 @@ export class DashboardService {
         tx.member.count({ where: { gymId, archivedAt: null, ...endsOnWhere('expiring', today, opts) } }),
         tx.member.count({ where: { gymId, archivedAt: null, ...endsOnWhere('expired', today, opts) } }),
       ]);
-      return { payments, expiring, expired, expiringCount, expiredCount };
+      return { payments, refunds, expiring, expired, expiringCount, expiredCount };
     });
 
+    const refundRows = data.refunds.map((r) => ({ amount: r.amount, method: r.method, paidAt: r.refundedAt }));
     const trend = trendRanges.map((m) => ({
       label: m.label,
-      total: aggregatePayments(data.payments, { from: m.from, to: m.to }).total,
+      total: aggregatePayments(data.payments, { from: m.from, to: m.to }, refundRows).total,
     }));
 
     return {

@@ -1,9 +1,10 @@
--- بررسی انحراف بدهی: باید هیچ ردیفی برنگرداند. با نقش مالک اجرا شود.
+-- بررسی انحراف بدهی (اشتراک لغوشده حساب نمی‌شود، با احتساب بازپرداخت‌ها): باید هیچ ردیفی برنگرداند. با نقش مالک اجرا شود.
 SELECT m.id, m."gymId", m.balance AS stored,
-       COALESCE(s.price_sum, 0) - COALESCE(p.paid_sum, 0) AS actual
+       COALESCE(s.price_sum, 0) - COALESCE(p.paid_sum, 0) + COALESCE(r.refund_sum, 0) AS actual
 FROM members m
-LEFT JOIN (SELECT "memberId", SUM(price) AS price_sum FROM subscriptions GROUP BY "memberId") s ON s."memberId" = m.id
+LEFT JOIN (SELECT "memberId", SUM(price) AS price_sum FROM subscriptions WHERE "cancelledAt" IS NULL GROUP BY "memberId") s ON s."memberId" = m.id
 LEFT JOIN (SELECT sub."memberId", SUM(pay.amount) AS paid_sum
            FROM payments pay JOIN subscriptions sub ON sub.id = pay."subscriptionId"
            GROUP BY sub."memberId") p ON p."memberId" = m.id
-WHERE m.balance <> COALESCE(s.price_sum, 0) - COALESCE(p.paid_sum, 0);
+LEFT JOIN (SELECT "memberId", SUM(amount) AS refund_sum FROM refunds GROUP BY "memberId") r ON r."memberId" = m.id
+WHERE m.balance <> COALESCE(s.price_sum, 0) - COALESCE(p.paid_sum, 0) + COALESCE(r.refund_sum, 0);

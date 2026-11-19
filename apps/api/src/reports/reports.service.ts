@@ -38,6 +38,10 @@ export class ReportsService {
         where: { gymId, paidAt: { gte: winStart, lt: winEnd } },
         select: { amount: true, method: true, paidAt: true },
       });
+      const refunds = await tx.refund.findMany({
+        where: { gymId, refundedAt: { gte: winStart, lt: winEnd } },
+        select: { amount: true, method: true, refundedAt: true },
+      });
       const ended = await tx.subscription.findMany({
         where: { gymId, endsOn: { gte: fromDateOnly(range.from), lte: fromDateOnly(range.to) } },
         select: { memberId: true, endsOn: true },
@@ -73,11 +77,12 @@ export class ReportsService {
           subscription: { select: { member: { select: { id: true, name: true } } } },
         },
       });
-      return { payments, ended, later, created, debt, active, recent };
+      return { payments, refunds, ended, later, created, debt, active, recent };
     });
 
-    const current = aggregatePayments(data.payments, range);
-    const previous = aggregatePayments(data.payments, prevRange);
+    const refundRows = data.refunds.map((r) => ({ amount: r.amount, method: r.method, paidAt: r.refundedAt }));
+    const current = aggregatePayments(data.payments, range, refundRows);
+    const previous = aggregatePayments(data.payments, prevRange, refundRows);
     const newInMonth = data.created.filter((m) => {
       const d = todayInTehran(m.createdAt);
       return d >= range.from && d <= range.to;

@@ -1,14 +1,16 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import { addDays, planRenewal, todayInTehran } from '@fulad/shared';
-import type { FreezeInput, PayDebtInput, RenewInput } from '@fulad/shared';
+import type { FreezeInput, PayDebtInput, RefundInput, RenewInput } from '@fulad/shared';
 import { writeAudit } from '../audit/audit';
 import type { AccessPayload } from '../auth/token';
 import { fromDateOnly, toDateOnly } from '../common/dates';
 import { IDEMPOTENCY_TTL_MS, decideIdempotency, idempotencyRequestHash } from '../common/idempotency';
 import { TenantService } from '../tenant/tenant.service';
 import { allocatePayment } from './payment-allocation';
+import { netPaid, recomputeBalance } from './balance';
 import { cancelledEndsOn, discountPrice, freezeChecks, MAX_FREEZE_TOTAL } from './subscription-v2';
+import { validateRefund } from './refund-logic';
 import { summarize, toSubscriptionDto } from './subscription.mapper';
 
 type Tx = Prisma.TransactionClient;
@@ -26,13 +28,9 @@ export class SubscriptionsService {
     return member;
   }
 
-  /** بدهی از روی ردیف‌ها دوباره محاسبه می‌شود تا هرگز از واقعیت فاصله نگیرد */
-  private async recomputeBalance(tx: Tx, gymId: string, memberId: string): Promise<number> {
-    const price = await tx.subscription.aggregate({ where: { gymId, memberId }, _sum: { price: true } });
-    const paid = await tx.payment.aggregate({ where: { gymId, subscription: { memberId } }, _sum: { amount: true } });
-    const balance = (price._sum.price ?? 0) - (paid._sum.amount ?? 0);
-    await tx.member.update({ where: { id: memberId }, data: { balance } });
-    return balance;
+  /** بدهی از روی ردیف‌ها (شامل بازپرداخت‌ها) دوباره محاسبه می‌شود تا هرگز از واقعیت فاصله نگیرد */
+  private async recomputeBalanceTx(tx: Tx, gymId: string, memberId: string): Promise<number> {
+    return recomputeBalance(tx, gymId, memberId);
   }
 
   async renew(auth: AccessPayload, memberId: string, input: RenewInput, ip?: string, idempotencyKey?: string) {
@@ -146,7 +144,7 @@ export class SubscriptionsService {
       });
     }
     await tx.member.update({ where: { id: memberId }, data: { currentEndsOn: fromDateOnly(r.endsOn) } });
-    const balance = await this.recomputeBalance(tx, auth.gymId, memberId);
+    const balance = await this.recomputeBalanceTx(tx, auth.gymId, memberId);
     await writeAudit(tx, {
       gymId: auth.gymId,
       actorId: auth.sub,
@@ -185,7 +183,7 @@ export class SubscriptionsService {
         data: { gymId: auth.gymId, subscriptionId: a.subscriptionId, amount: a.amount, method: input.method },
       });
     }
-    const balance = await this.recomputeBalance(tx, auth.gymId, memberId);
+    const balance = await this.recomputeBalanceTx(tx, auth.gymId, memberId);
     await writeAudit(tx, {
       gymId: auth.gymId,
       actorId: auth.sub,
@@ -280,6 +278,40 @@ export class SubscriptionsService {
       select: { endsOn: true },
     });
     await tx.member.update({ where: { id: memberId }, data: { currentEndsOn: latest ? latest.endsOn : null } });
+  }
+
+  /** بازپرداخت با سند معکوس: فقط مدیر؛ سقف = پول خالص عضو؛ مانده منفی نمی‌شود؛ هیچ پرداختی حذف/ویرایش نمی‌شود */
+  async refund(auth: AccessPayload, memberId: string, input: RefundInput, ip?: string) {
+    return this.tenant.run(auth.gymId, async (tx) => {
+      await this.lockMember(tx, auth.gymId, memberId);
+      const [paid, member] = await Promise.all([
+        netPaid(tx, auth.gymId, memberId),
+        tx.member.findFirstOrThrow({ where: { id: memberId, gymId: auth.gymId }, select: { balance: true } }),
+      ]);
+      const check = validateRefund({ amount: input.amount, netPaid: paid, balance: member.balance });
+      if (!check.ok) {
+        throw new ConflictException({
+          message:
+            check.reason === 'EXCEEDS_NET_PAID'
+              ? 'بازپرداخت از پول خالص پرداخت‌شده‌ی عضو بیشتر است'
+              : 'بازپرداخت مانده‌ی عضو را منفی می‌کند؛ ابتدا بدهی را تسویه کنید',
+          code: `REFUND_${check.reason}`,
+        });
+      }
+      const created = await tx.refund.create({
+        data: { gymId: auth.gymId, memberId, amount: input.amount, method: input.method, reason: input.reason ?? null },
+      });
+      const balance = await this.recomputeBalanceTx(tx, auth.gymId, memberId);
+      await writeAudit(tx, {
+        gymId: auth.gymId,
+        actorId: auth.sub,
+        action: 'payment.refund',
+        target: `member:${memberId}`,
+        meta: { amount: input.amount, method: input.method, reason: input.reason ?? null },
+        ip,
+      });
+      return { refundId: created.id, balance };
+    });
   }
 
   async history(auth: AccessPayload, memberId: string) {

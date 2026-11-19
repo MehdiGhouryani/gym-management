@@ -5,6 +5,7 @@ import { useMemo, useState } from 'react';
 import { Badge, Button, DataTable, Dialog, EmptyState, Field, Input, Skeleton, StatCard, type Column } from '../../../../src/ui/index';
 import { MemberFields, memberFormFromMember, memberFormToInput, type MemberFormValues } from '../../../../src/features/member-fields';
 import { PayDebtDialog } from '../../../../src/features/pay-debt-dialog';
+import { RefundDialog } from '../../../../src/features/refund-dialog';
 import { RenewDialog } from '../../../../src/features/renew-dialog';
 import { api } from '../../../../src/lib/api';
 import { useApi } from '../../../../src/lib/use-api';
@@ -59,6 +60,7 @@ export default function MemberProfilePage() {
   const [freezeSub, setFreezeSub] = useState<Subscription | null>(null);
   const [freezeDays, setFreezeDays] = useState('');
   const [cancelSub, setCancelSub] = useState<Subscription | null>(null);
+  const [refundOpen, setRefundOpen] = useState(false);
 
   const m = member.data;
 
@@ -184,6 +186,11 @@ export default function MemberProfilePage() {
                 پرداخت بدهی
               </Button>
             ) : null}
+            {isOwner ? (
+              <Button variant="ghost" size="sm" onClick={() => setRefundOpen(true)} disabled={!!m.archivedAt}>
+                بازپرداخت
+              </Button>
+            ) : null}
             <Button variant="ghost" size="sm" onClick={() => { setForm(memberFormFromMember(m)); setEditErrors({}); setEditOpen(true); }}>
               ویرایش
             </Button>
@@ -260,6 +267,16 @@ export default function MemberProfilePage() {
         balance={m.balance}
         onDone={() => {
           setPayOpen(false);
+          refreshAll();
+        }}
+      />
+      <RefundDialog
+        open={refundOpen}
+        onClose={() => setRefundOpen(false)}
+        memberId={m.id}
+        memberName={m.name}
+        onDone={() => {
+          setRefundOpen(false);
           refreshAll();
         }}
       />

@@ -6,8 +6,8 @@ export interface PaymentRow {
   paidAt: Date;
 }
 
-/** تاریخ هر پرداخت به وقت تهران حساب می‌شود، نه UTC */
-export function aggregatePayments(rows: PaymentRow[], range: { from: string; to: string }) {
+/** تاریخ هر پرداخت به وقت تهران حساب می‌شود، نه UTC. بازپرداخت‌ها از درآمد همان روز کم می‌شوند */
+export function aggregatePayments(rows: PaymentRow[], range: { from: string; to: string }, refunds: PaymentRow[] = []) {
   const weeks = [0, 0, 0, 0];
   const byMethod: Record<string, number> = { CASH: 0, CARD: 0, POS: 0 };
   let total = 0;
@@ -21,6 +21,13 @@ export function aggregatePayments(rows: PaymentRow[], range: { from: string; to:
     byMethod[r.method] = (byMethod[r.method] ?? 0) + r.amount;
     total += r.amount;
     count++;
+  }
+  for (const r of refunds) {
+    const day = todayInTehran(r.paidAt);
+    if (day < range.from || day > range.to) continue;
+    byMethod[r.method] = (byMethod[r.method] ?? 0) - r.amount;
+    total -= r.amount;
+    count--;
   }
   return { total, count, byMethod, weeks };
 }

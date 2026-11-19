@@ -14,6 +14,7 @@ export interface BodySchemas {
   gymUpdate: JsonSchema;
   createStaff: JsonSchema;
   freeze: JsonSchema;
+  refund: JsonSchema;
 }
 
 const BODY_NAMES: Record<keyof BodySchemas, string> = {
@@ -29,6 +30,7 @@ const BODY_NAMES: Record<keyof BodySchemas, string> = {
   gymUpdate: 'GymUpdateBody',
   createStaff: 'CreateStaffBody',
   freeze: 'FreezeBody',
+  refund: 'RefundBody',
 };
 
 const ref = (name: string) => ({ $ref: `#/components/schemas/${name}` });
@@ -131,6 +133,7 @@ function componentSchemas(bodies: BodySchemas): Record<string, unknown> {
       allocations: { type: 'array', items: obj({ subscriptionId: uuid, amount: int() }) },
       balance: int({ description: 'بدهی باقی‌مانده' }),
     }),
+    RefundResult: obj({ refundId: uuid, balance: int({ description: 'بدهی پس از بازپرداخت' }) }),
     MonthlyReport: obj({
       period: obj({ year: int(), month: int(), monthName: str(), from: date, to: date }),
       revenue: obj({
@@ -376,6 +379,11 @@ export function buildOpenApi(bodies: BodySchemas) {
       description: 'اختیاری؛ همان رفتار تمدید.',
     }],
     ok: { code: 201, schema: 'PayResult', description: 'ثبت شد' }, errors: [...AUTHED, 400, 404, 409],
+  });
+  add('post', '/members/{id}/refunds', {
+    tag: 'اشتراک و پرداخت', summary: 'بازپرداخت با سند معکوس (فقط مدیر)', body: 'refund',
+    description: 'سقف: پول خالص پرداخت‌شده‌ی عضو. پرداخت‌ها حذف/ویرایش نمی‌شوند؛ سند جداگانه ثبت و بدهی دوباره از ردیف‌ها حساب می‌شود.',
+    ok: { code: 201, schema: 'RefundResult', description: 'بازپرداخت ثبت شد' }, errors: [...AUTHED, 400, 404, 409],
   });
   add('post', '/members/{id}/subscriptions/{subId}/freeze', {
     tag: 'اشتراک و پرداخت', summary: 'توقف موقت اشتراک (فقط مدیر)', body: 'freeze',

@@ -9,5 +9,7 @@ GRANT USAGE ON SCHEMA public TO fulad_app;
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO fulad_app;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO fulad_app;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO fulad_app;
--- لاگ ممیزی فقط افزودنی است
+-- لاگ ممیزی و اسناد مالی فقط افزودنی‌اند: هیچ ویرایش یا حذفی از سطح برنامه ممکن نیست
 REVOKE UPDATE, DELETE ON audit_logs FROM fulad_app;
+REVOKE UPDATE, DELETE ON payments FROM fulad_app;
+REVOKE UPDATE, DELETE ON refunds FROM fulad_app;

@@ -69,6 +69,7 @@ model Gym {
   auditLogs     AuditLog[]
   idempotencyKeys IdempotencyKey[]
   planPriceHistories PlanPriceHistory[]
+  refunds       Refund[]
 
   @@map("gyms")
 }
@@ -99,10 +100,11 @@ model Member {
   archivedAt    DateTime?
   // آخرین روز معتبر اشتراک؛ فقط بخش اشتراک آن را در همان تراکنشِ ثبت یا تمدید به‌روز می‌کند (وضعیت از روی آن محاسبه می‌شود)
   currentEndsOn DateTime?      @db.Date
-  // بدهی کل عضو (تومان) = جمع مبلغ اشتراک‌ها منهای جمع پرداخت‌ها؛ همیشه از روی ردیف‌ها دوباره محاسبه می‌شود
+  // بدهی کل عضو (تومان) = جمع اشتراک‌ها منهای جمع پرداخت‌ها به‌علاوه‌ی جمع بازپرداخت‌ها؛ همیشه از ردیف‌ها دوباره محاسبه می‌شود
   balance       Int            @default(0)
   createdAt     DateTime       @default(now())
   subscriptions Subscription[]
+  refunds       Refund[]
   reminders     Reminder[]
   requests      Request[]
 
@@ -188,6 +190,23 @@ model Payment {
 
   @@index([gymId, paidAt])
   @@map("payments")
+}
+
+/// سند معکوس: بازپرداخت هرگز پرداخت را حذف یا ویرایش نمی‌کند؛ سند جداگانه ثبت می‌شود
+model Refund {
+  id        String    @id @default(uuid())
+  gymId     String
+  gym       Gym       @relation(fields: [gymId], references: [id])
+  memberId  String
+  member    Member    @relation(fields: [memberId, gymId], references: [id, gymId])
+  amount    Int
+  method    PayMethod
+  reason    String?
+  refundedAt DateTime @default(now())
+
+  @@index([gymId, refundedAt])
+  @@index([memberId, refundedAt])
+  @@map("refunds")
 }
 
 model OtpCode {

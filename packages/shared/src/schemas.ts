@@ -146,6 +146,13 @@ export const payDebtSchema = z.object({
   method: payMethodSchema,
 });
 
+/** بازپرداخت با سند معکوس؛ فقط مدیر. مانده پس از بازپرداخت نمی‌تواند منفی شود */
+export const refundSchema = z.object({
+  amount: z.number().int().min(1).max(2_000_000_000),
+  method: payMethodSchema,
+  reason: z.string().trim().max(200).optional(),
+});
+
 export type OtpRequestInput = z.infer<typeof otpRequestSchema>;
 export type OtpVerifyInput = z.infer<typeof otpVerifySchema>;
 export type RefreshInput = z.infer<typeof refreshSchema>;
@@ -162,3 +169,4 @@ export type PayDebtInput = z.infer<typeof payDebtSchema>;
 export type GymUpdateInput = z.infer<typeof gymUpdateSchema>;
 export type CreateStaffInput = z.infer<typeof createStaffSchema>;
 export type FreezeInput = z.infer<typeof freezeSchema>;
+export type RefundInput = z.infer<typeof refundSchema>;
