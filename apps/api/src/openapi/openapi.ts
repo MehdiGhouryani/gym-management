@@ -125,6 +125,23 @@ function componentSchemas(bodies: BodySchemas): Record<string, unknown> {
         items: obj({ id: uuid, amount: int(), method: str({ enum: METHODS }), paidAt: dateTime, memberId: uuid, memberName: str() }),
       },
     }),
+    Dashboard: obj({
+      kpis: obj({
+        activeMembers: int({ description: 'اعضای بایگانی‌نشده با اشتراک معتبر امروز' }),
+        monthRevenue: int(), revenueChangePercent: nullable('integer'),
+        receivables: int(), debtors: int(), newInMonth: int(),
+        followUps: int({ description: 'نزدیک انقضا + منقضی در مهلت پیگیری' }),
+      }),
+      trend: { type: 'array', items: obj({ label: str(), total: int() }), description: 'درآمد ۶ ماه اخیر شمسی' },
+      recentPayments: {
+        type: 'array',
+        items: obj({ id: uuid, amount: int(), method: str({ enum: METHODS }), paidAt: dateTime, memberId: uuid, memberName: str() }),
+      },
+      followUps: obj({
+        expiring: { type: 'array', items: ref('Member') },
+        expired: { type: 'array', items: ref('Member') },
+      }),
+    }),
   };
 }
 
@@ -232,6 +249,11 @@ export function buildOpenApi(bodies: BodySchemas) {
     ok: { code: 200, schema: 'RevokeResult', description: 'همه باطل شدند' }, errors: AUTHED,
   });
   add('get', '/me', { tag: 'ورود', summary: 'هویت کاربر فعلی از روی توکن', ok: { code: 200, schema: 'Me', description: 'هویت' }, errors: [401] });
+
+  add('get', '/dashboard', {
+    tag: 'گزارش', summary: 'داشبورد مدیریتی', description: 'KPIهای ماه جاری، روند ۶ ماه درآمد، مرکز پیگیری و آخرین پرداخت‌ها.',
+    ok: { code: 200, schema: 'Dashboard', description: 'داشبورد' }, errors: [...AUTHED],
+  });
 
   add('get', '/members', {
     tag: 'اعضا', summary: 'فهرست اعضا با جستجو و فیلتر', description: 'نقش: مدیر و پذیرش. archived فقط برای مدیر. ترتیب: نزدیک‌ترین انقضا بالا.',
