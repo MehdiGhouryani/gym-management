@@ -11,6 +11,7 @@ export interface Member {
   daysLeft: number | null;
   followUp: boolean;
   balance: number;
+  smsOptOut: boolean;
   archivedAt: string | null;
   createdAt: string;
 }

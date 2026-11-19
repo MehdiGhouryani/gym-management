@@ -50,6 +50,8 @@ export const updateMemberSchema = z
     phone: phoneSchema.optional(),
     birthDate: dateOnly.nullable().optional(),
     note: noteSchema.nullable().optional(),
+    /** رضایت پیامک یادآوری */
+    smsOptOut: z.boolean().optional(),
   })
   .refine((v) => Object.values(v).some((x) => x !== undefined), 'حداقل یک فیلد لازم است');
 

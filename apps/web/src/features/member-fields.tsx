@@ -8,6 +8,8 @@ export interface MemberFormValues {
   phone: string;
   birthDate: string; // شمسی؛ خالی یعنی ندارد
   note: string;
+  /** رضایت پیامک یادآوری */
+  smsOptOut: boolean;
 }
 
 interface Props {
@@ -49,26 +51,38 @@ export function MemberFields({ values, onChange, errors }: Props) {
       <Field label="یادداشت (اختیاری)" htmlFor="m-note" state={errors.note ? 'error' : 'default'} hint={errors.note}>
         <Textarea id="m-note" value={values.note} onChange={(e) => set({ note: e.target.value })} />
       </Field>
+      <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--mut)', cursor: 'pointer', marginBottom: 12 }}>
+        <input type="checkbox" checked={values.smsOptOut} onChange={(e) => set({ smsOptOut: e.target.checked })} />
+        عضو پیامک یادآوری نمی‌خواهد (انصراف از اعلان‌ها)
+      </label>
     </>
   );
 }
 
 /** تبدیل فرم به بدنه‌ی API؛ birthDate خالی حذف می‌شود */
-export function memberFormToInput(values: MemberFormValues): { name: string; phone: string; birthDate?: string; note?: string } {
+export function memberFormToInput(values: MemberFormValues): { name: string; phone: string; birthDate?: string; note?: string; smsOptOut?: boolean } {
   const iso = parseJalaliDate(values.birthDate);
   return {
     name: values.name,
     phone: values.phone,
     ...(iso ? { birthDate: iso } : {}),
     ...(values.note.trim() ? { note: values.note.trim() } : {}),
+    ...(values.smsOptOut ? { smsOptOut: true } : {}),
   };
 }
 
-export const emptyMemberForm: MemberFormValues = { name: '', phone: '', birthDate: '', note: '' };
+export const emptyMemberForm: MemberFormValues = { name: '', phone: '', birthDate: '', note: '', smsOptOut: false };
 
-export const memberFormFromMember = (m: { name: string; phone: string; birthDate: string | null; note: string | null }): MemberFormValues => ({
+export const memberFormFromMember = (m: {
+  name: string;
+  phone: string;
+  birthDate: string | null;
+  note: string | null;
+  smsOptOut: boolean;
+}): MemberFormValues => ({
   name: m.name,
   phone: m.phone,
   birthDate: m.birthDate ? toJalaliString(m.birthDate) : '',
   note: m.note ?? '',
+  smsOptOut: m.smsOptOut,
 });

@@ -7,6 +7,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
 import { GymModule } from './gym/gym.module';
 import { HealthController } from './health.controller';
 import { MembersModule } from './members/members.module';
+import { NotificationsModule } from './notifications/notifications.module';
 import { PaymentsModule } from './payments/payments.module';
 import { PlansModule } from './plans/plans.module';
 import { ReportsModule } from './reports/reports.module';
@@ -21,6 +22,7 @@ import { PrismaModule } from './prisma.module';
     AuthModule,
     MembersModule,
     PaymentsModule,
+    NotificationsModule,
     PlansModule,
     SubscriptionsModule,
     ReportsModule,

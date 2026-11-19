@@ -102,6 +102,8 @@ model Member {
   currentEndsOn DateTime?      @db.Date
   // بدهی کل عضو (تومان) = جمع اشتراک‌ها منهای جمع پرداخت‌ها به‌علاوه‌ی جمع بازپرداخت‌ها؛ همیشه از ردیف‌ها دوباره محاسبه می‌شود
   balance       Int            @default(0)
+  /** عضو پیامک یادآوری نمی‌خواهد (رضایت اعلان‌ها) */
+  smsOptOut     Boolean        @default(false)
   createdAt     DateTime       @default(now())
   subscriptions Subscription[]
   refunds       Refund[]
@@ -231,6 +233,8 @@ model Reminder {
   member     Member         @relation(fields: [memberId, gymId], references: [id, gymId])
   template   String
   status     ReminderStatus @default(QUEUED)
+  /** تلاش‌های ارسال؛ بعد از ۳ تلاش ناموفق FAILED می‌شود */
+  attempts   Int            @default(0)
   providerId String?
   error      String?
   sentAt     DateTime?

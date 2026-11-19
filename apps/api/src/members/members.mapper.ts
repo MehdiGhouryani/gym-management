@@ -11,6 +11,7 @@ export interface MemberRow {
   currentEndsOn: Date | null;
   balance: number;
   archivedAt: Date | null;
+  smsOptOut: boolean;
   createdAt: Date;
 }
 
@@ -29,6 +30,7 @@ export function toMemberDto(m: MemberRow, today: string, opts: StatusOptions) {
     followUp: s.followUp,
     balance: m.balance,
     archivedAt: m.archivedAt ? m.archivedAt.toISOString() : null,
+    smsOptOut: m.smsOptOut,
     createdAt: m.createdAt.toISOString(),
   };
 }

@@ -139,11 +139,12 @@ export class MembersService {
         const dup = await tx.member.findUnique({ where: { gymId_phone: { gymId: auth.gymId, phone: input.phone } } });
         if (dup) throw this.duplicate(dup);
       }
-      const data: { name?: string; phone?: string; birthDate?: Date | null; note?: string | null } = {};
+      const data: { name?: string; phone?: string; birthDate?: Date | null; note?: string | null; smsOptOut?: boolean } = {};
       if (input.name !== undefined) data.name = input.name;
       if (input.phone !== undefined) data.phone = input.phone;
       if (input.birthDate !== undefined) data.birthDate = input.birthDate ? fromDateOnly(input.birthDate) : null;
       if (input.note !== undefined) data.note = input.note || null;
+      if (input.smsOptOut !== undefined) data.smsOptOut = input.smsOptOut;
       try {
         return await tx.member.update({ where: { id }, data });
       } catch (e) {

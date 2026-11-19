@@ -91,6 +91,17 @@ function componentSchemas(bodies: BodySchemas): Record<string, unknown> {
     }),
     SessionsPage: obj({ items: { type: 'array', items: ref('Session') } }),
     RevokeResult: obj({ ok: { type: 'boolean' }, revoked: int({ description: 'تعداد نشست باطل‌شده' }) }),
+    ReminderRow: obj({
+      id: uuid,
+      template: str({ enum: ['expiring', 'expired', 'debt', 'receipt'] }),
+      status: str({ enum: ['QUEUED', 'SENT', 'FAILED'] }),
+      attempts: int(), error: nullable('string'), sentAt: nullable('string', { format: 'date-time' }),
+      createdAt: dateTime, memberId: uuid, memberName: str(), memberPhone: str(),
+    }),
+    RemindersPage: obj({
+      items: { type: 'array', items: ref('ReminderRow') },
+      total: int(), page: int(), limit: int(), pages: int(),
+    }),
     Health: obj({ ok: { type: 'boolean' }, today: date, time: dateTime }),
     Gym: obj({
       id: uuid, slug: str(), name: str(), city: str(), address: nullable('string'), phone: nullable('string'),
@@ -109,6 +120,7 @@ function componentSchemas(bodies: BodySchemas): Record<string, unknown> {
       note: nullable('string'), currentEndsOn: nullable('string', { format: 'date' }),
       status: str({ enum: STATUS }), daysLeft: nullable('integer', { description: 'صفر یعنی امروز آخرین روز است؛ منفی یعنی گذشته' }),
       followUp: { type: 'boolean', description: 'منقضی و هنوز در مهلت پیگیری' }, balance: int({ description: 'بدهی (تومان)' }),
+      smsOptOut: { type: 'boolean', description: 'عضو پیامک یادآوری نمی‌خواهد' },
       archivedAt: nullable('string', { format: 'date-time' }), createdAt: dateTime,
     }),
     MemberPage: obj({ items: { type: 'array', items: ref('Member') }, total: int(), page: int(), limit: int(), pages: int() }),
@@ -316,6 +328,14 @@ export function buildOpenApi(bodies: BodySchemas) {
     ],
     ok: { code: 200, schema: 'PaymentsPage', description: 'پرداخت‌ها' }, errors: [...AUTHED, 400],
   });
+  add('get', '/reminders', {
+    tag: 'اعلان‌ها', summary: 'ردیابی یادآوری‌ها (فقط مدیر)', description: 'صف و وضعیت تحویل پیامک‌های یادآوری؛ ورکر روزانه صف را ارسال می‌کند.',
+    query: [
+      { name: 'status', schema: str({ enum: ['QUEUED', 'SENT', 'FAILED'] }) },
+      ...page,
+    ],
+    ok: { code: 200, schema: 'RemindersPage', description: 'یادآوری‌ها' }, errors: AUTHED,
+  });
 
   add('get', '/members', {
     tag: 'اعضا', summary: 'فهرست اعضا با جستجو و فیلتر', description: 'نقش: مدیر و پذیرش. archived فقط برای مدیر. ترتیب: نزدیک‌ترین انقضا بالا.',
@@ -413,7 +433,7 @@ export function buildOpenApi(bodies: BodySchemas) {
       description: 'مدیریت اعضا، اشتراک و پرداخت. همه‌ی مبلغ‌ها عدد صحیح به تومان و تاریخ‌ها میلادی (YYYY-MM-DD) هستند.',
     },
     servers: [{ url: '/api/v1' }],
-    tags: ['سلامت', 'باشگاه', 'ورود', 'اعضا', 'پلن‌ها', 'اشتراک و پرداخت', 'گزارش'].map((name) => ({ name })),
+    tags: ['سلامت', 'باشگاه', 'ورود', 'اعضا', 'پلن‌ها', 'اشتراک و پرداخت', 'گزارش', 'اعلان‌ها'].map((name) => ({ name })),
     paths,
     components: {
       securitySchemes: { bearerAuth: { type: 'http', scheme: 'bearer', description: 'accessToken از /auth/otp/verify' } },

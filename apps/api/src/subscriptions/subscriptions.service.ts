@@ -7,6 +7,7 @@ import type { AccessPayload } from '../auth/token';
 import { fromDateOnly, toDateOnly } from '../common/dates';
 import { IDEMPOTENCY_TTL_MS, decideIdempotency, idempotencyRequestHash } from '../common/idempotency';
 import { TenantService } from '../tenant/tenant.service';
+import { queueReminder } from '../notifications/core';
 import { allocatePayment } from './payment-allocation';
 import { netPaid, recomputeBalance } from './balance';
 import { cancelledEndsOn, discountPrice, freezeChecks, MAX_FREEZE_TOTAL } from './subscription-v2';
@@ -145,14 +146,15 @@ export class SubscriptionsService {
     }
     await tx.member.update({ where: { id: memberId }, data: { currentEndsOn: fromDateOnly(r.endsOn) } });
     const balance = await this.recomputeBalanceTx(tx, auth.gymId, memberId);
-    await writeAudit(tx, {
-      gymId: auth.gymId,
-      actorId: auth.sub,
-      action: 'subscription.create',
-      target: `member:${memberId}`,
-      meta: { subscriptionId: sub.id, planId: plan.id, price, paid: input.paidAmount, startsOn: r.startsOn, endsOn: r.endsOn },
-      ip,
-    });
+      await writeAudit(tx, {
+        gymId: auth.gymId,
+        actorId: auth.sub,
+        action: 'subscription.create',
+        target: `member:${memberId}`,
+        meta: { subscriptionId: sub.id, planId: plan.id, price, paid: input.paidAmount, startsOn: r.startsOn, endsOn: r.endsOn },
+        ip,
+      });
+      if (input.paidAmount > 0) await queueReminder(tx, auth.gymId, memberId, 'receipt');
 
     const full = await tx.subscription.findUniqueOrThrow({
       where: { id: sub.id },
@@ -183,16 +185,17 @@ export class SubscriptionsService {
         data: { gymId: auth.gymId, subscriptionId: a.subscriptionId, amount: a.amount, method: input.method },
       });
     }
-    const balance = await this.recomputeBalanceTx(tx, auth.gymId, memberId);
-    await writeAudit(tx, {
-      gymId: auth.gymId,
-      actorId: auth.sub,
-      action: 'payment.debt',
-      target: `member:${memberId}`,
-      meta: { amount: input.amount, method: input.method, allocations: allocations.length },
-      ip,
-    });
-    return { allocations, balance };
+      const balance = await this.recomputeBalanceTx(tx, auth.gymId, memberId);
+      await writeAudit(tx, {
+        gymId: auth.gymId,
+        actorId: auth.sub,
+        action: 'payment.debt',
+        target: `member:${memberId}`,
+        meta: { amount: input.amount, method: input.method, allocations: allocations.length },
+        ip,
+      });
+      await queueReminder(tx, auth.gymId, memberId, 'receipt');
+      return { allocations, balance };
   }
 
   /** توقف موقت اشتراک: پایان اشتراک کش داده می‌شود (فقط مدیر، حداکثر ۳۰ روز مجموع) */
