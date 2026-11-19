@@ -10,6 +10,7 @@ CREATE TABLE subscriptions (id text PRIMARY KEY, "gymId" text NOT NULL REFERENCE
 CREATE TABLE payments (id text PRIMARY KEY, "gymId" text NOT NULL REFERENCES gyms(id));
 CREATE TABLE reminders (id text PRIMARY KEY, "gymId" text NOT NULL REFERENCES gyms(id));
 CREATE TABLE requests (id text PRIMARY KEY, "gymId" text NOT NULL REFERENCES gyms(id));
+CREATE TABLE audit_logs (id text PRIMARY KEY, "gymId" text REFERENCES gyms(id));
 \ir 001_tenant_rls.sql
 
 CREATE ROLE rls_tester NOSUPERUSER NOBYPASSRLS;

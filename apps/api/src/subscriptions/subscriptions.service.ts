@@ -78,6 +78,7 @@ export class SubscriptionsService {
       await tx.member.update({ where: { id: memberId }, data: { currentEndsOn: fromDateOnly(r.endsOn) } });
       const balance = await this.recomputeBalance(tx, auth.gymId, memberId);
       await writeAudit(tx, {
+        gymId: auth.gymId,
         actorId: auth.sub,
         action: 'subscription.create',
         target: `member:${memberId}`,
@@ -118,6 +119,7 @@ export class SubscriptionsService {
       }
       const balance = await this.recomputeBalance(tx, auth.gymId, memberId);
       await writeAudit(tx, {
+        gymId: auth.gymId,
         actorId: auth.sub,
         action: 'payment.debt',
         target: `member:${memberId}`,

@@ -61,6 +61,7 @@ model Gym {
   payments      Payment[]
   reminders     Reminder[]
   requests      Request[]
+  auditLogs     AuditLog[]
 
   @@map("gyms")
 }
@@ -99,6 +100,8 @@ model Member {
   requests      Request[]
 
   @@unique([gymId, phone])
+  // برای کلید خارجی ترکیبی: هیچ اشتراک/یادآوری/درخواستی از باشگاه دیگر به این عضو اشاره نمی‌کند
+  @@unique([id, gymId])
   @@index([gymId, name])
   @@index([gymId, currentEndsOn])
   @@index([gymId, balance])
@@ -115,6 +118,9 @@ model Plan {
   active        Boolean        @default(true)
   subscriptions Subscription[]
 
+  // نام یکتا در هر باشگاه (بی‌توجه به بزرگی/کوچکی حروف در سطح سرویس کنترل می‌شود)
+  @@unique([gymId, name])
+  @@unique([id, gymId])
   @@index([gymId])
   @@map("plans")
 }
@@ -124,15 +130,16 @@ model Subscription {
   gymId     String
   gym       Gym       @relation(fields: [gymId], references: [id])
   memberId  String
-  member    Member    @relation(fields: [memberId], references: [id])
+  member    Member    @relation(fields: [memberId, gymId], references: [id, gymId])
   planId    String
-  plan      Plan      @relation(fields: [planId], references: [id])
+  plan      Plan      @relation(fields: [planId, gymId], references: [id, gymId])
   startsOn  DateTime  @db.Date
   endsOn    DateTime  @db.Date
   price     Int
   createdAt DateTime  @default(now())
   payments  Payment[]
 
+  @@unique([id, gymId])
   @@index([gymId, endsOn])
   @@index([memberId, endsOn])
   @@map("subscriptions")
@@ -143,7 +150,7 @@ model Payment {
   gymId          String
   gym            Gym          @relation(fields: [gymId], references: [id])
   subscriptionId String
-  subscription   Subscription @relation(fields: [subscriptionId], references: [id])
+  subscription   Subscription @relation(fields: [subscriptionId, gymId], references: [id, gymId])
   amount         Int
   method         PayMethod
   paidAt         DateTime     @default(now())
@@ -171,7 +178,7 @@ model Reminder {
   gymId      String
   gym        Gym            @relation(fields: [gymId], references: [id])
   memberId   String
-  member     Member         @relation(fields: [memberId], references: [id])
+  member     Member         @relation(fields: [memberId, gymId], references: [id, gymId])
   template   String
   status     ReminderStatus @default(QUEUED)
   providerId String?
@@ -189,7 +196,7 @@ model Request {
   gymId     String
   gym       Gym           @relation(fields: [gymId], references: [id])
   memberId  String?
-  member    Member?       @relation(fields: [memberId], references: [id])
+  member    Member?       @relation(fields: [memberId, gymId], references: [id, gymId])
   phone     String
   name      String?
   type      RequestType
@@ -202,6 +209,8 @@ model Request {
 
 model AuditLog {
   id       String   @id @default(uuid())
+  gymId    String?
+  gym      Gym?     @relation(fields: [gymId], references: [id], onDelete: Restrict)
   actorId  String?
   action   String
   target   String?
@@ -209,6 +218,7 @@ model AuditLog {
   ip       String?
   at       DateTime @default(now())
 
+  @@index([gymId, at])
   @@index([actorId, at])
   @@index([at])
   @@map("audit_logs")

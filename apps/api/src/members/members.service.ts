@@ -166,7 +166,7 @@ export class MembersService {
         where: { subjectType: 'MEMBER', subjectId: id, revokedAt: null },
         data: { revokedAt: new Date() },
       });
-      await writeAudit(tx, { actorId: auth.sub, action: 'member.archive', target: `member:${id}`, ip });
+      await writeAudit(tx, { gymId: auth.gymId, actorId: auth.sub, action: 'member.archive', target: `member:${id}`, ip });
       return updated;
     });
     return toMemberDto(m, todayInTehran(), opts);
@@ -179,7 +179,7 @@ export class MembersService {
       if (!cur) throw new NotFoundException('عضو پیدا نشد');
       if (!cur.archivedAt) return cur;
       const updated = await tx.member.update({ where: { id }, data: { archivedAt: null } });
-      await writeAudit(tx, { actorId: auth.sub, action: 'member.restore', target: `member:${id}`, ip });
+      await writeAudit(tx, { gymId: auth.gymId, actorId: auth.sub, action: 'member.restore', target: `member:${id}`, ip });
       return updated;
     });
     return toMemberDto(m, todayInTehran(), opts);

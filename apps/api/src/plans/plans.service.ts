@@ -28,7 +28,7 @@ export class PlansService {
       const dup = await tx.plan.findFirst({ where: { gymId: auth.gymId, name: { equals: input.name, mode: 'insensitive' } } });
       if (dup) throw duplicate();
       const created = await tx.plan.create({ data: { gymId: auth.gymId, name: input.name, days: input.days, price: input.price } });
-      await writeAudit(tx, { actorId: auth.sub, action: 'plan.create', target: `plan:${created.id}`, meta: { ...input }, ip });
+      await writeAudit(tx, { gymId: auth.gymId, actorId: auth.sub, action: 'plan.create', target: `plan:${created.id}`, meta: { ...input }, ip });
       return created;
     });
     return toPlanDto(plan);
@@ -51,7 +51,7 @@ export class PlansService {
       if (input.price !== undefined) data.price = input.price;
       if (input.active !== undefined) data.active = input.active;
       const updated = await tx.plan.update({ where: { id }, data });
-      await writeAudit(tx, { actorId: auth.sub, action: 'plan.update', target: `plan:${id}`, meta: { ...data }, ip });
+      await writeAudit(tx, { gymId: auth.gymId, actorId: auth.sub, action: 'plan.update', target: `plan:${id}`, meta: { ...data }, ip });
       return updated;
     });
     return toPlanDto(plan);

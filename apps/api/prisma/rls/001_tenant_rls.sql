@@ -4,7 +4,7 @@
 DO $$
 DECLARE t text;
 BEGIN
-  FOREACH t IN ARRAY ARRAY['members','plans','subscriptions','payments','reminders','requests'] LOOP
+  FOREACH t IN ARRAY ARRAY['members','plans','subscriptions','payments','reminders','requests','audit_logs'] LOOP
     EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', t);
     EXECUTE format('ALTER TABLE %I FORCE ROW LEVEL SECURITY', t);
     EXECUTE format('DROP POLICY IF EXISTS tenant_isolation ON %I', t);
