@@ -139,12 +139,13 @@ export class MembersService {
         const dup = await tx.member.findUnique({ where: { gymId_phone: { gymId: auth.gymId, phone: input.phone } } });
         if (dup) throw this.duplicate(dup);
       }
-      const data: { name?: string; phone?: string; birthDate?: Date | null; note?: string | null; smsOptOut?: boolean } = {};
+      const data: { name?: string; phone?: string; birthDate?: Date | null; note?: string | null; smsOptOut?: boolean; tags?: string[] } = {};
       if (input.name !== undefined) data.name = input.name;
       if (input.phone !== undefined) data.phone = input.phone;
       if (input.birthDate !== undefined) data.birthDate = input.birthDate ? fromDateOnly(input.birthDate) : null;
       if (input.note !== undefined) data.note = input.note || null;
       if (input.smsOptOut !== undefined) data.smsOptOut = input.smsOptOut;
+      if (input.tags !== undefined) data.tags = input.tags.map((t) => t.trim()).filter(Boolean);
       try {
         return await tx.member.update({ where: { id }, data });
       } catch (e) {
@@ -153,6 +154,21 @@ export class MembersService {
       }
     });
     return toMemberDto(m, today, opts);
+  }
+
+  /** تایم‌لاین عضو از لاگ ممیزی (فقط مدیر) */
+  async timeline(auth: AccessPayload, id: string) {
+    return this.tenant.run(auth.gymId, async (tx) => {
+      const member = await tx.member.findFirst({ where: { id, gymId: auth.gymId }, select: { id: true } });
+      if (!member) throw new NotFoundException('عضو پیدا نشد');
+      const rows = await tx.auditLog.findMany({
+        where: { gymId: auth.gymId, target: `member:${id}` },
+        orderBy: { at: 'desc' },
+        take: 50,
+        select: { id: true, action: true, meta: true, at: true },
+      });
+      return { items: rows.map((r) => ({ id: r.id, action: r.action, at: r.at.toISOString(), meta: r.meta })) };
+    });
   }
 
   /** بایگانی به‌جای حذف: سوابق مالی می‌مانند و نشست‌های وب عضو باطل می‌شود */

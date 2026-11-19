@@ -12,8 +12,36 @@ export interface Member {
   followUp: boolean;
   balance: number;
   smsOptOut: boolean;
+  tags: string[];
   archivedAt: string | null;
   createdAt: string;
+}
+
+export type LeadStatus = 'NEW' | 'CONTACTED' | 'TRIAL' | 'CONVERTED' | 'LOST';
+
+export interface Lead {
+  id: string;
+  name: string;
+  phone: string;
+  status: LeadStatus;
+  source: string | null;
+  note: string | null;
+  memberId: string | null;
+  memberName: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LeadsPageData {
+  items: Lead[];
+  total: number;
+  page: number;
+  limit: number;
+  pages: number;
+}
+
+export interface MemberTimeline {
+  items: { id: string; action: string; at: string; meta: Record<string, unknown> | null }[];
 }
 
 export interface MemberPage {

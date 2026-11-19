@@ -15,6 +15,8 @@ export interface BodySchemas {
   createStaff: JsonSchema;
   freeze: JsonSchema;
   refund: JsonSchema;
+  createLead: JsonSchema;
+  updateLead: JsonSchema;
 }
 
 const BODY_NAMES: Record<keyof BodySchemas, string> = {
@@ -31,6 +33,8 @@ const BODY_NAMES: Record<keyof BodySchemas, string> = {
   createStaff: 'CreateStaffBody',
   freeze: 'FreezeBody',
   refund: 'RefundBody',
+  createLead: 'CreateLeadBody',
+  updateLead: 'UpdateLeadBody',
 };
 
 const ref = (name: string) => ({ $ref: `#/components/schemas/${name}` });
@@ -121,10 +125,26 @@ function componentSchemas(bodies: BodySchemas): Record<string, unknown> {
       status: str({ enum: STATUS }), daysLeft: nullable('integer', { description: 'صفر یعنی امروز آخرین روز است؛ منفی یعنی گذشته' }),
       followUp: { type: 'boolean', description: 'منقضی و هنوز در مهلت پیگیری' }, balance: int({ description: 'بدهی (تومان)' }),
       smsOptOut: { type: 'boolean', description: 'عضو پیامک یادآوری نمی‌خواهد' },
+      tags: { type: 'array', items: str(), description: 'برچسب‌های دسته‌بندی' },
       archivedAt: nullable('string', { format: 'date-time' }), createdAt: dateTime,
     }),
     MemberPage: obj({ items: { type: 'array', items: ref('Member') }, total: int(), page: int(), limit: int(), pages: int() }),
     MemberCounts: obj({ all: int(), active: int(), expiring: int(), expired: int(), lapsed: int(), none: int(), debtors: int() }),
+    MemberTimeline: obj({
+      items: { type: 'array', items: obj({ id: uuid, action: str(), at: dateTime, meta: nullable('object') }) },
+    }),
+    Lead: obj({
+      id: uuid, name: str(), phone: str(),
+      status: str({ enum: ['NEW', 'CONTACTED', 'TRIAL', 'CONVERTED', 'LOST'] }),
+      source: nullable('string'), note: nullable('string'),
+      memberId: nullable('uuid'), memberName: nullable('string'),
+      createdAt: dateTime, updatedAt: dateTime,
+    }),
+    LeadsPage: obj({
+      items: { type: 'array', items: ref('Lead') },
+      total: int(), page: int(), limit: int(), pages: int(),
+    }),
+    ConvertLeadResult: obj({ memberId: uuid, lead: ref('Lead') }),
     Plan: obj({
       id: uuid, name: str(), kind: str({ enum: ['days', 'sessions'] }),
       days: int(), sessionsCount: nullable('integer', { description: 'فقط پلن جلسه‌ای' }),
@@ -337,6 +357,30 @@ export function buildOpenApi(bodies: BodySchemas) {
     ok: { code: 200, schema: 'RemindersPage', description: 'یادآوری‌ها' }, errors: AUTHED,
   });
 
+  add('get', '/leads', {
+    tag: 'سرنخ‌ها', summary: 'فهرست سرنخ‌های فروش', description: 'چرخه: NEW → CONTACTED → TRIAL → CONVERTED/LOST.',
+    query: [
+      { name: 'status', schema: str({ enum: ['NEW', 'CONTACTED', 'TRIAL', 'CONVERTED', 'LOST'] }) },
+      { name: 'q', schema: str({ maxLength: 80 }) },
+      ...page,
+    ],
+    ok: { code: 200, schema: 'LeadsPage', description: 'سرنخ‌ها' }, errors: [...AUTHED, 400],
+  });
+  add('post', '/leads', {
+    tag: 'سرنخ‌ها', summary: 'ثبت سرنخ', body: 'createLead',
+    description: 'شماره‌ی عضو موجود: ۴۰۹ ALREADY_MEMBER. سرنخ تکراری: ۴۰۹ LEAD_EXISTS.',
+    ok: { code: 201, schema: 'Lead', description: 'ثبت شد' }, errors: [...AUTHED, 400, 409],
+  });
+  add('patch', '/leads/{id}', {
+    tag: 'سرنخ‌ها', summary: 'تغییر وضعیت/یادداشت سرنخ', body: 'updateLead',
+    description: 'گذارها فقط طبق چرخه؛ گذار نامعتبر: ۴۰۰ LEAD_TRANSITION.',
+    ok: { code: 200, schema: 'Lead', description: 'به‌روزرسانی شد' }, errors: [...AUTHED, 400, 404],
+  });
+  add('post', '/leads/{id}/convert', {
+    tag: 'سرنخ‌ها', summary: 'تبدیل سرنخ به عضو', description: 'فقط از وضعیت TRIAL؛ عضو با نام و شماره ساخته می‌شود و اشتراک جدا ثبت می‌شود.',
+    ok: { code: 201, schema: 'ConvertLeadResult', description: 'تبدیل شد' }, errors: [...AUTHED, 404, 409],
+  });
+
   add('get', '/members', {
     tag: 'اعضا', summary: 'فهرست اعضا با جستجو و فیلتر', description: 'نقش: مدیر و پذیرش. archived فقط برای مدیر. ترتیب: نزدیک‌ترین انقضا بالا.',
     query: [
@@ -382,6 +426,10 @@ export function buildOpenApi(bodies: BodySchemas) {
   });
 
   add('get', '/members/{id}/subscriptions', { tag: 'اشتراک و پرداخت', summary: 'تاریخچه‌ی اشتراک‌ها و پرداخت‌ها', ok: { code: 200, schema: 'SubscriptionHistory', description: 'تاریخچه' }, errors: [...AUTHED, 400, 404] });
+  add('get', '/members/{id}/timeline', {
+    tag: 'اعضا', summary: 'تایم‌لاین ممیزی عضو (فقط مدیر)',
+    ok: { code: 200, schema: 'MemberTimeline', description: 'رویدادها' }, errors: [...AUTHED, 404],
+  });
   add('post', '/members/{id}/subscriptions', {
     tag: 'اشتراک و پرداخت', summary: 'ثبت یا تمدید اشتراک', body: 'renew',
     description: 'بدون startsOn: اشتراک معتبر از روز بعد از پایان فعلی و اشتراک منقضی از امروز. price فقط برای مدیر. paidAmount از مبلغ بیشتر نمی‌شود.',

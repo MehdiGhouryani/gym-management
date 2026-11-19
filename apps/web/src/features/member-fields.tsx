@@ -8,6 +8,8 @@ export interface MemberFormValues {
   phone: string;
   birthDate: string; // شمسی؛ خالی یعنی ندارد
   note: string;
+  /** برچسب‌ها با کاما جدا می‌شوند */
+  tags: string;
   /** رضایت پیامک یادآوری */
   smsOptOut: boolean;
 }
@@ -51,6 +53,9 @@ export function MemberFields({ values, onChange, errors }: Props) {
       <Field label="یادداشت (اختیاری)" htmlFor="m-note" state={errors.note ? 'error' : 'default'} hint={errors.note}>
         <Textarea id="m-note" value={values.note} onChange={(e) => set({ note: e.target.value })} />
       </Field>
+      <Field label="برچسب‌ها (اختیاری، با کاما)" htmlFor="m-tags" hint="مثل: کشتی، کراس‌فیت، شب‌ها">
+        <Input id="m-tags" value={values.tags} onChange={(e) => set({ tags: e.target.value })} />
+      </Field>
       <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--mut)', cursor: 'pointer', marginBottom: 12 }}>
         <input type="checkbox" checked={values.smsOptOut} onChange={(e) => set({ smsOptOut: e.target.checked })} />
         عضو پیامک یادآوری نمی‌خواهد (انصراف از اعلان‌ها)
@@ -60,18 +65,27 @@ export function MemberFields({ values, onChange, errors }: Props) {
 }
 
 /** تبدیل فرم به بدنه‌ی API؛ birthDate خالی حذف می‌شود */
-export function memberFormToInput(values: MemberFormValues): { name: string; phone: string; birthDate?: string; note?: string; smsOptOut?: boolean } {
+export function memberFormToInput(values: MemberFormValues): {
+  name: string;
+  phone: string;
+  birthDate?: string;
+  note?: string;
+  smsOptOut?: boolean;
+  tags?: string[];
+} {
   const iso = parseJalaliDate(values.birthDate);
+  const tags = values.tags.split(/[،,]/).map((t) => t.trim()).filter((t) => t.length >= 2);
   return {
     name: values.name,
     phone: values.phone,
     ...(iso ? { birthDate: iso } : {}),
     ...(values.note.trim() ? { note: values.note.trim() } : {}),
     ...(values.smsOptOut ? { smsOptOut: true } : {}),
+    ...({ tags: tags.length ? tags : [] } as { tags: string[] }),
   };
 }
 
-export const emptyMemberForm: MemberFormValues = { name: '', phone: '', birthDate: '', note: '', smsOptOut: false };
+export const emptyMemberForm: MemberFormValues = { name: '', phone: '', birthDate: '', note: '', tags: '', smsOptOut: false };
 
 export const memberFormFromMember = (m: {
   name: string;
@@ -79,10 +93,12 @@ export const memberFormFromMember = (m: {
   birthDate: string | null;
   note: string | null;
   smsOptOut: boolean;
+  tags: string[];
 }): MemberFormValues => ({
   name: m.name,
   phone: m.phone,
   birthDate: m.birthDate ? toJalaliString(m.birthDate) : '',
   note: m.note ?? '',
+  tags: m.tags.join('، '),
   smsOptOut: m.smsOptOut,
 });

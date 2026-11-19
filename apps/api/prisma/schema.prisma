@@ -48,6 +48,14 @@ enum RequestStatus {
   REJECTED
 }
 
+enum LeadStatus {
+  NEW
+  CONTACTED
+  TRIAL
+  CONVERTED
+  LOST
+}
+
 model Gym {
   id            String         @id @default(uuid())
   slug          String         @unique
@@ -70,6 +78,7 @@ model Gym {
   idempotencyKeys IdempotencyKey[]
   planPriceHistories PlanPriceHistory[]
   refunds       Refund[]
+  leads         Lead[]
 
   @@map("gyms")
 }
@@ -104,9 +113,12 @@ model Member {
   balance       Int            @default(0)
   /** عضو پیامک یادآوری نمی‌خواهد (رضایت اعلان‌ها) */
   smsOptOut     Boolean        @default(false)
+  /** برچسب‌های آزاد برای دسته‌بندی (مثل «کشتی»، «کراس‌فیت») */
+  tags          String[]       @default([])
   createdAt     DateTime       @default(now())
   subscriptions Subscription[]
   refunds       Refund[]
+  leads         Lead[]
   reminders     Reminder[]
   requests      Request[]
 
@@ -195,6 +207,28 @@ model Payment {
 }
 
 /// سند معکوس: بازپرداخت هرگز پرداخت را حذف یا ویرایش نمی‌کند؛ سند جداگانه ثبت می‌شود
+/// سرنخ فروش: متقاضی که هنوز عضو نشده؛ چرخه: NEW → CONTACTED → TRIAL → CONVERTED/LOST
+model Lead {
+  id        String     @id @default(uuid())
+  gymId     String
+  gym       Gym        @relation(fields: [gymId], references: [id])
+  name      String
+  phone     String
+  status    LeadStatus @default(NEW)
+  /** منبع: معرف، اینستاگرام، سایت و… */
+  source    String?
+  note      String?
+  /** بعد از تبدیل به عضو پر می‌شود */
+  memberId  String?
+  member    Member?    @relation(fields: [memberId, gymId], references: [id, gymId])
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@unique([gymId, phone])
+  @@index([gymId, status])
+  @@map("leads")
+}
+
 model Refund {
   id        String    @id @default(uuid())
   gymId     String

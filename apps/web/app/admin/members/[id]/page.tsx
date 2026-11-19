@@ -10,9 +10,9 @@ import { RenewDialog } from '../../../../src/features/renew-dialog';
 import { api } from '../../../../src/lib/api';
 import { useApi } from '../../../../src/lib/use-api';
 import { useSession } from '../../../../src/lib/session';
-import { faNum, faToman, statusBadge } from '../../../../src/lib/format';
+import { faDate, faNum, faToman, statusBadge } from '../../../../src/lib/format';
 import { toJalaliString } from '../../../../src/lib/jalali-input';
-import type { Member, Subscription, SubscriptionHistory } from '../../../../src/lib/types';
+import type { Member, MemberTimeline, Subscription, SubscriptionHistory } from '../../../../src/lib/types';
 
 const subColumnsBase: Column<Subscription>[] = [
   {
@@ -49,6 +49,7 @@ export default function MemberProfilePage() {
 
   const member = useApi<Member>(`/members/${id}`);
   const history = useApi<SubscriptionHistory>(`/members/${id}/subscriptions`);
+  const timeline = useApi<MemberTimeline>(isOwner ? `/members/${id}/timeline` : null);
 
   const [renewOpen, setRenewOpen] = useState(false);
   const [payOpen, setPayOpen] = useState(false);
@@ -176,6 +177,13 @@ export default function MemberProfilePage() {
               {m.birthDate ? ` · تولد ${toJalaliString(m.birthDate)}` : ''}
               {m.note ? ` · ${m.note}` : ''}
             </p>
+            {m.tags.length > 0 ? (
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
+                {m.tags.map((t) => (
+                  <Badge key={t} kind="tint">{t}</Badge>
+                ))}
+              </div>
+            ) : null}
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <Button variant="primary" size="sm" onClick={() => setRenewOpen(true)} disabled={!!m.archivedAt}>
@@ -346,6 +354,28 @@ export default function MemberProfilePage() {
       <p style={{ fontSize: 12, color: 'var(--mut)', margin: 0 }}>
         عضو از {toJalaliString(m.createdAt.slice(0, 10))} در باشگاه است.
       </p>
+
+      {isOwner ? (
+        <div>
+          <h2 style={{ fontSize: 14, margin: '0 0 10px' }}>تایم‌لاین فعالیت‌ها</h2>
+          <div className="u-table-wrap" style={{ padding: 14 }}>
+            {timeline.loading ? (
+              <Skeleton height={60} />
+            ) : (timeline.data?.items.length ?? 0) === 0 ? (
+              <p style={{ fontSize: 13, color: 'var(--mut)', margin: 0 }}>رویدادی ثبت نشده است.</p>
+            ) : (
+              <div style={{ display: 'grid', gap: 6, fontSize: 13 }}>
+                {timeline.data?.items.map((t) => (
+                  <div key={t.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, borderBottom: '1px solid color-mix(in srgb, var(--line) 50%, transparent)', paddingBottom: 6 }}>
+                    <span style={{ fontWeight: 700 }}>{t.action}</span>
+                    <span style={{ color: 'var(--mut)' }}>{faDate(t.at)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

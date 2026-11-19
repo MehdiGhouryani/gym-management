@@ -52,6 +52,8 @@ export const updateMemberSchema = z
     note: noteSchema.nullable().optional(),
     /** رضایت پیامک یادآوری */
     smsOptOut: z.boolean().optional(),
+    /** برچسب‌های دسته‌بندی (حداکثر ۸ تا) */
+    tags: z.array(z.string().trim().min(2).max(24)).max(8).optional(),
   })
   .refine((v) => Object.values(v).some((x) => x !== undefined), 'حداقل یک فیلد لازم است');
 
@@ -142,6 +144,37 @@ export const renewSchema = z
 
 export const freezeSchema = z.object({ days: z.number().int().min(1).max(30) });
 
+// ---------- CRM: سرنخ‌ها ----------
+export const leadStatusSchema = z.enum(['NEW', 'CONTACTED', 'TRIAL', 'CONVERTED', 'LOST']);
+
+export const createLeadSchema = z.object({
+  name: textOf('نام', 2, 80),
+  phone: phoneSchema,
+  source: z.string().trim().max(80).optional(),
+  note: z.string().trim().max(300).optional(),
+});
+
+export const updateLeadSchema = z
+  .object({
+    status: leadStatusSchema.optional(),
+    source: z.string().trim().max(80).nullable().optional(),
+    note: z.string().trim().max(300).nullable().optional(),
+  })
+  .refine((v) => Object.values(v).some((x) => x !== undefined), 'حداقل یک فیلد لازم است');
+
+/** چرخه‌ی مجاز سرنخ؛ هر گذار فقط به همین حالت‌ها */
+export const leadTransitions: Record<string, string[]> = {
+  NEW: ['CONTACTED', 'TRIAL', 'LOST'],
+  CONTACTED: ['TRIAL', 'LOST'],
+  TRIAL: ['CONVERTED', 'LOST'],
+  CONVERTED: [],
+  LOST: ['CONTACTED'],
+};
+
+export function canTransitionLead(from: string, to: string): boolean {
+  return (leadTransitions[from] ?? []).includes(to);
+}
+
 /** پرداخت بدهی عضو؛ از قدیمی‌ترین اشتراک بدهکار کم می‌شود */
 export const payDebtSchema = z.object({
   amount: z.number().int().min(1).max(2_000_000_000),
@@ -172,3 +205,5 @@ export type GymUpdateInput = z.infer<typeof gymUpdateSchema>;
 export type CreateStaffInput = z.infer<typeof createStaffSchema>;
 export type FreezeInput = z.infer<typeof freezeSchema>;
 export type RefundInput = z.infer<typeof refundSchema>;
+export type CreateLeadInput = z.infer<typeof createLeadSchema>;
+export type UpdateLeadInput = z.infer<typeof updateLeadSchema>;

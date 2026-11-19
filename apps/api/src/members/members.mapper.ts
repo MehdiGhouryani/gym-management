@@ -12,6 +12,7 @@ export interface MemberRow {
   balance: number;
   archivedAt: Date | null;
   smsOptOut: boolean;
+  tags: string[];
   createdAt: Date;
 }
 
@@ -31,6 +32,7 @@ export function toMemberDto(m: MemberRow, today: string, opts: StatusOptions) {
     balance: m.balance,
     archivedAt: m.archivedAt ? m.archivedAt.toISOString() : null,
     smsOptOut: m.smsOptOut,
+    tags: m.tags,
     createdAt: m.createdAt.toISOString(),
   };
 }

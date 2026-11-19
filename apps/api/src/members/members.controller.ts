@@ -43,6 +43,12 @@ export class MembersController {
     return this.members.update(auth, id, body);
   }
 
+  @Get(':id/timeline')
+  @Roles('OWNER')
+  timeline(@CurrentAuth() auth: AccessPayload, @Param('id', ParseUUIDPipe) id: string) {
+    return this.members.timeline(auth, id);
+  }
+
   @Post(':id/archive')
   @HttpCode(200)
   @Roles('OWNER')

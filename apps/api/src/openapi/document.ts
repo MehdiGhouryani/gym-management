@@ -1,7 +1,8 @@
 import { z } from 'zod';
 import {
-  createPlanSchema, createStaffSchema, freezeSchema, gymUpdateSchema, memberFieldsSchema, otpRequestSchema, otpVerifySchema,
-  payDebtSchema, refundSchema, refreshSchema, renewSchema, updateMemberSchema, updatePlanSchema,
+  createLeadSchema, createPlanSchema, createStaffSchema, freezeSchema, gymUpdateSchema, memberFieldsSchema,
+  otpRequestSchema, otpVerifySchema, payDebtSchema, refundSchema, refreshSchema, renewSchema, updateLeadSchema,
+  updateMemberSchema, updatePlanSchema,
 } from '@fulad/shared';
 import { buildOpenApi } from './openapi';
 import type { BodySchemas, JsonSchema } from './openapi';
@@ -27,6 +28,8 @@ export function buildOpenApiDocument() {
     createStaff: toSchema(createStaffSchema),
     freeze: toSchema(freezeSchema),
     refund: toSchema(refundSchema),
+    createLead: toSchema(createLeadSchema),
+    updateLead: toSchema(updateLeadSchema),
   };
   return buildOpenApi(bodies);
 }
