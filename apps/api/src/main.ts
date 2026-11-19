@@ -8,6 +8,7 @@ import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { getSecrets } from './config/secrets';
+import { HttpExceptionFilter } from './common/http-exception.filter';
 import { isAllowedOrigin } from './common/origin';
 import { buildOpenApiDocument, docsEnabled } from './openapi/document';
 
@@ -34,6 +35,7 @@ async function bootstrap() {
     next();
   });
   app.setGlobalPrefix('api/v1');
+  app.useGlobalFilters(new HttpExceptionFilter());
   app.enableCors({ origin: ALLOWED_ORIGINS, credentials: true });
   if (docsEnabled()) SwaggerModule.setup(DOCS_PATH, app, buildOpenApiDocument() as unknown as OpenAPIObject);
   await app.listen(Number(process.env.PORT ?? 4000));

@@ -62,6 +62,7 @@ model Gym {
   reminders     Reminder[]
   requests      Request[]
   auditLogs     AuditLog[]
+  idempotencyKeys IdempotencyKey[]
 
   @@map("gyms")
 }
@@ -222,6 +223,23 @@ model AuditLog {
   @@index([actorId, at])
   @@index([at])
   @@map("audit_logs")
+}
+
+model IdempotencyKey {
+  id          String   @id @default(uuid())
+  gymId       String
+  gym         Gym      @relation(fields: [gymId], references: [id])
+  key         String
+  requestHash String
+  statusCode  Int
+  response    Json?
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+
+  // یک کلید در هر باشگاه؛ درخواست تکراری همان بدنه پاسخ اصلی را می‌گیرد و بدنه‌ی متفاوت ۴۰۹
+  @@unique([gymId, key])
+  @@index([gymId, expiresAt])
+  @@map("idempotency_keys")
 }
 
 model RefreshToken {

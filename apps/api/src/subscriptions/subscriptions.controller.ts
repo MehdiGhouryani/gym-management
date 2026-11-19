@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Ip, Param, ParseUUIDPipe, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Headers, Ip, Param, ParseUUIDPipe, Post, UseGuards } from '@nestjs/common';
 import { payDebtSchema, renewSchema } from '@fulad/shared';
 import type { PayDebtInput, RenewInput } from '@fulad/shared';
 import { AuthGuard } from '../auth/auth.guard';
@@ -6,6 +6,12 @@ import { CurrentAuth, Roles, RolesGuard } from '../auth/roles';
 import type { AccessPayload } from '../auth/token';
 import { ZodPipe } from '../common/zod.pipe';
 import { SubscriptionsService } from './subscriptions.service';
+
+/** کلید اختیاری درخواست‌های مالی؛ حداکثر ۲۰۰ نویسه */
+const idempotencyKeyOf = (raw?: string): string | undefined => {
+  const v = raw?.trim();
+  return v && v.length <= 200 ? v : undefined;
+};
 
 @Controller('members/:id')
 @UseGuards(AuthGuard, RolesGuard)
@@ -24,8 +30,9 @@ export class SubscriptionsController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body(new ZodPipe(renewSchema)) body: RenewInput,
     @Ip() ip: string,
+    @Headers('idempotency-key') idempotencyKey?: string,
   ) {
-    return this.subs.renew(auth, id, body, ip);
+    return this.subs.renew(auth, id, body, ip, idempotencyKeyOf(idempotencyKey));
   }
 
   @Post('payments')
@@ -34,7 +41,8 @@ export class SubscriptionsController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body(new ZodPipe(payDebtSchema)) body: PayDebtInput,
     @Ip() ip: string,
+    @Headers('idempotency-key') idempotencyKey?: string,
   ) {
-    return this.subs.payDebt(auth, id, body, ip);
+    return this.subs.payDebt(auth, id, body, ip, idempotencyKeyOf(idempotencyKey));
   }
 }

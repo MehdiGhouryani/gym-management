@@ -59,7 +59,7 @@ function componentSchemas(bodies: BodySchemas): Record<string, unknown> {
       description: 'ساختار خطا (NestJS). فیلدهای اضافه بسته به نوع خطا می‌آیند.',
       properties: {
         statusCode: int(), message: { oneOf: [str(), { type: 'array', items: str() }] }, error: str(),
-        code: str({ description: 'مثلاً MEMBER_EXISTS، MEMBER_ARCHIVED، PLAN_EXISTS، PLAN_INACTIVE، NO_DEBT، AMOUNT_EXCEEDS_DEBT' }),
+        code: str({ description: 'مثلاً MEMBER_EXISTS، MEMBER_ARCHIVED، PLAN_EXISTS، PLAN_INACTIVE، NO_DEBT، AMOUNT_EXCEEDS_DEBT، IDEMPOTENCY_CONFLICT، ORIGIN_FORBIDDEN' }),
         existingMemberId: uuid, totalDebt: int(), retryAfterSec: int(),
         issues: { type: 'array', items: obj({ path: str(), message: str() }) },
       },
@@ -140,6 +140,7 @@ interface OpSpec {
   auth?: boolean;
   body?: keyof BodySchemas;
   query?: Param[];
+  headers?: Param[];
   ok: { code: number; schema?: string; description: string };
   errors?: number[];
 }
@@ -162,6 +163,9 @@ export function buildOpenApi(bodies: BodySchemas) {
     }));
     for (const q of s.query ?? []) {
       parameters.push({ name: q.name, in: 'query', required: false, schema: q.schema, description: q.description });
+    }
+    for (const h of s.headers ?? []) {
+      parameters.push({ name: h.name, in: 'header', required: false, schema: h.schema, description: h.description });
     }
     const responses: Record<string, unknown> = {
       [String(s.ok.code)]: s.ok.schema
@@ -273,11 +277,19 @@ export function buildOpenApi(bodies: BodySchemas) {
   add('post', '/members/{id}/subscriptions', {
     tag: 'اشتراک و پرداخت', summary: 'ثبت یا تمدید اشتراک', body: 'renew',
     description: 'بدون startsOn: اشتراک معتبر از روز بعد از پایان فعلی و اشتراک منقضی از امروز. price فقط برای مدیر. paidAmount از مبلغ بیشتر نمی‌شود.',
+    headers: [{
+      name: 'Idempotency-Key', schema: str({ maxLength: 200 }),
+      description: 'اختیاری؛ برای شبکه‌ی ضعیف. همان کلید و همان بدنه = همان پاسخ بدون اجرای دوباره؛ همان کلید با بدنه‌ی متفاوت = ۴۰۹ IDEMPOTENCY_CONFLICT.',
+    }],
     ok: { code: 201, schema: 'RenewResult', description: 'ثبت شد' }, errors: [...AUTHED, 400, 404, 409],
   });
   add('post', '/members/{id}/payments', {
     tag: 'اشتراک و پرداخت', summary: 'پرداخت بدهی', body: 'payDebt',
     description: 'از قدیمی‌ترین اشتراک بدهکار کم می‌شود. مبلغ بیش از کل بدهی: ۴۰۰ با code برابر AMOUNT_EXCEEDS_DEBT.',
+    headers: [{
+      name: 'Idempotency-Key', schema: str({ maxLength: 200 }),
+      description: 'اختیاری؛ همان رفتار تمدید.',
+    }],
     ok: { code: 201, schema: 'PayResult', description: 'ثبت شد' }, errors: [...AUTHED, 400, 404, 409],
   });
 
