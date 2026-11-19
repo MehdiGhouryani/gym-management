@@ -1,0 +1,17 @@
+:root {
+  --bg: #EEF0EA; --card: #fff; --ink: #15231E; --mut: #5F6F68; --line: #D5DBD3;
+  --pr: #1F4D3F; --tint: #DCE8E1; --ok: #2E7D57; --okt: #E1F0E7; --wn: #9A6400; --wnt: #FBEFD0;
+  --bd: #B8402B; --bdt: #F7DDD7; --dt: #6B4B9A; --dtt: #E9E1F4; --sig: #F2B134;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #0F1512; --card: #18221E; --ink: #E9EFEB; --mut: #9AA8A1; --line: #2B3832;
+    --pr: #3A8F6B; --tint: #1F3A2F; --ok: #6FCB9B; --okt: #1C3328; --wn: #E3B04B; --wnt: #3A2F14;
+    --bd: #EE8C79; --bdt: #3D2220; --dt: #B79CE3; --dtt: #2B2340;
+  }
+}
+:root[data-theme='dark'] {
+  --bg: #0F1512; --card: #18221E; --ink: #E9EFEB; --mut: #9AA8A1; --line: #2B3832;
+  --pr: #3A8F6B; --tint: #1F3A2F; --ok: #6FCB9B; --okt: #1C3328; --wn: #E3B04B; --wnt: #3A2F14;
+  --bd: #EE8C79; --bdt: #3D2220; --dt: #B79CE3; --dtt: #2B2340;
+}

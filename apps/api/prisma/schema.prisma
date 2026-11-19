@@ -1,0 +1,231 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("MIGRATE_DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  OWNER
+  STAFF
+}
+
+enum GymStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+}
+
+enum PayMethod {
+  CASH
+  CARD
+  POS
+}
+
+enum ReminderStatus {
+  QUEUED
+  SENT
+  FAILED
+}
+
+enum RequestType {
+  JOIN
+  RENEW
+}
+
+enum RequestStatus {
+  OPEN
+  APPROVED
+  REJECTED
+}
+
+model Gym {
+  id            String         @id @default(uuid())
+  slug          String         @unique
+  name          String
+  city          String
+  address       String?
+  phone         String?
+  status        GymStatus      @default(PENDING)
+  expiringDays  Int            @default(7)
+  graceDays     Int            @default(14)
+  createdAt     DateTime       @default(now())
+  users         User[]
+  members       Member[]
+  plans         Plan[]
+  subscriptions Subscription[]
+  payments      Payment[]
+  reminders     Reminder[]
+  requests      Request[]
+
+  @@map("gyms")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  role         Role
+  gymId        String?
+  gym          Gym?     @relation(fields: [gymId], references: [id])
+  name         String
+  phone        String?  @unique
+  email        String?  @unique
+  passwordHash String?
+  totpSecret   String?
+  createdAt    DateTime @default(now())
+
+  @@map("users")
+}
+
+model Member {
+  id            String         @id @default(uuid())
+  gymId         String
+  gym           Gym            @relation(fields: [gymId], references: [id])
+  name          String
+  phone         String
+  birthDate     DateTime?      @db.Date
+  note          String?
+  archivedAt    DateTime?
+  // آخرین روز معتبر اشتراک؛ فقط بخش اشتراک آن را در همان تراکنشِ ثبت یا تمدید به‌روز می‌کند (وضعیت از روی آن محاسبه می‌شود)
+  currentEndsOn DateTime?      @db.Date
+  // بدهی کل عضو (تومان) = جمع مبلغ اشتراک‌ها منهای جمع پرداخت‌ها؛ همیشه از روی ردیف‌ها دوباره محاسبه می‌شود
+  balance       Int            @default(0)
+  createdAt     DateTime       @default(now())
+  subscriptions Subscription[]
+  reminders     Reminder[]
+  requests      Request[]
+
+  @@unique([gymId, phone])
+  @@index([gymId, name])
+  @@index([gymId, currentEndsOn])
+  @@index([gymId, balance])
+  @@map("members")
+}
+
+model Plan {
+  id            String         @id @default(uuid())
+  gymId         String
+  gym           Gym            @relation(fields: [gymId], references: [id])
+  name          String
+  days          Int
+  price         Int
+  active        Boolean        @default(true)
+  subscriptions Subscription[]
+
+  @@index([gymId])
+  @@map("plans")
+}
+
+model Subscription {
+  id        String    @id @default(uuid())
+  gymId     String
+  gym       Gym       @relation(fields: [gymId], references: [id])
+  memberId  String
+  member    Member    @relation(fields: [memberId], references: [id])
+  planId    String
+  plan      Plan      @relation(fields: [planId], references: [id])
+  startsOn  DateTime  @db.Date
+  endsOn    DateTime  @db.Date
+  price     Int
+  createdAt DateTime  @default(now())
+  payments  Payment[]
+
+  @@index([gymId, endsOn])
+  @@index([memberId, endsOn])
+  @@map("subscriptions")
+}
+
+model Payment {
+  id             String       @id @default(uuid())
+  gymId          String
+  gym            Gym          @relation(fields: [gymId], references: [id])
+  subscriptionId String
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id])
+  amount         Int
+  method         PayMethod
+  paidAt         DateTime     @default(now())
+
+  @@index([gymId, paidAt])
+  @@map("payments")
+}
+
+model OtpCode {
+  id         String    @id @default(uuid())
+  phone      String
+  purpose    String
+  codeHash   String
+  expiresAt  DateTime
+  attempts   Int       @default(0)
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([phone, createdAt])
+  @@map("otp_codes")
+}
+
+model Reminder {
+  id         String         @id @default(uuid())
+  gymId      String
+  gym        Gym            @relation(fields: [gymId], references: [id])
+  memberId   String
+  member     Member         @relation(fields: [memberId], references: [id])
+  template   String
+  status     ReminderStatus @default(QUEUED)
+  providerId String?
+  error      String?
+  sentAt     DateTime?
+  createdAt  DateTime       @default(now())
+
+  @@index([memberId, createdAt])
+  @@index([gymId, status])
+  @@map("reminders")
+}
+
+model Request {
+  id        String        @id @default(uuid())
+  gymId     String
+  gym       Gym           @relation(fields: [gymId], references: [id])
+  memberId  String?
+  member    Member?       @relation(fields: [memberId], references: [id])
+  phone     String
+  name      String?
+  type      RequestType
+  status    RequestStatus @default(OPEN)
+  createdAt DateTime      @default(now())
+
+  @@index([gymId, status])
+  @@map("requests")
+}
+
+model AuditLog {
+  id       String   @id @default(uuid())
+  actorId  String?
+  action   String
+  target   String?
+  meta     Json?
+  ip       String?
+  at       DateTime @default(now())
+
+  @@index([actorId, at])
+  @@index([at])
+  @@map("audit_logs")
+}
+
+model RefreshToken {
+  id          String    @id @default(uuid())
+  familyId    String
+  subjectType String
+  subjectId   String
+  gymId       String?
+  tokenHash   String    @unique
+  expiresAt   DateTime
+  revokedAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([familyId])
+  @@index([subjectType, subjectId])
+  @@map("refresh_tokens")
+}

@@ -1,0 +1,84 @@
+# برای افزونه‌ی REST Client در VS Code یا JetBrains HTTP Client.
+# بعد از  pnpm db:seed  و  pnpm dev  از بالا به پایین اجرا کنید.
+
+@base = http://localhost:4000/api/v1
+@owner = 09120000001
+
+### ۱) درخواست کد (کد ۵ رقمی در لاگ سرور چاپ می‌شود)
+POST {{base}}/auth/otp/request
+Content-Type: application/json
+
+{ "phone": "{{owner}}", "purpose": "manager" }
+
+### ۲) تأیید کد: به‌جای 12345 کد لاگ را بگذارید
+# @name login
+POST {{base}}/auth/otp/verify
+Content-Type: application/json
+
+{ "phone": "{{owner}}", "purpose": "manager", "code": "12345" }
+
+###
+@token = {{login.response.body.$.accessToken}}
+@refresh = {{login.response.body.$.refreshToken}}
+
+### ۳) هویت
+GET {{base}}/me
+Authorization: Bearer {{token}}
+
+### ۴) شمارنده‌ی چیپ‌ها
+GET {{base}}/members/counts
+Authorization: Bearer {{token}}
+
+### ۵) فهرست اعضا (نزدیک انقضا)
+# @name members
+GET {{base}}/members?status=expiring
+Authorization: Bearer {{token}}
+
+###
+@memberId = {{members.response.body.$.items[0].id}}
+
+### ۶) جستجو با چهار رقم آخر موبایل
+GET {{base}}/members?q=1005
+Authorization: Bearer {{token}}
+
+### ۷) پلن‌ها
+# @name plans
+GET {{base}}/plans
+Authorization: Bearer {{token}}
+
+###
+@planId = {{plans.response.body.$[1].id}}
+
+### ۸) تمدید با پرداخت کامل (۱۲ میلیون)
+POST {{base}}/members/{{memberId}}/subscriptions
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "planId": "{{planId}}", "paidAmount": 12000000, "method": "CARD" }
+
+### ۹) تاریخچه‌ی عضو
+GET {{base}}/members/{{memberId}}/subscriptions
+Authorization: Bearer {{token}}
+
+### ۱۰) ثبت عضو جدید (ارقام فارسی و فاصله هم پذیرفته می‌شود)
+POST {{base}}/members
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "name": "علی رضایی", "phone": "۰۹۱۲ ۳۴۵ ۶۷۸۹" }
+
+### ۱۱) گزارش ماه جاری (فقط مدیر)
+GET {{base}}/reports/monthly
+Authorization: Bearer {{token}}
+
+### ۱۲) چرخش توکن
+POST {{base}}/auth/refresh
+Content-Type: application/json
+
+{ "refreshToken": "{{refresh}}" }
+
+### ۱۳) خروج
+POST {{base}}/auth/logout
+Content-Type: application/json
+
+{ "refreshToken": "{{refresh}}" }

@@ -1,0 +1,9 @@
+/* فایل‌های فونت وزیرمتن را در public/fonts بگذارید (نگاه کنید به README) */
+@font-face { font-family: Vazirmatn; font-weight: 400; font-display: swap; src: url('/fonts/Vazirmatn-Regular.woff2') format('woff2'); }
+@font-face { font-family: Vazirmatn; font-weight: 700; font-display: swap; src: url('/fonts/Vazirmatn-Bold.woff2') format('woff2'); }
+*, *::before, *::after { box-sizing: border-box; }
+html { background: var(--bg); }
+body { margin: 0; font-family: Vazirmatn, Tahoma, sans-serif; background: var(--bg); color: var(--ink); line-height: 1.7; }
+main { max-width: 720px; margin: 0 auto; padding: 32px 20px; }
+h1 { font-size: 28px; margin: 0 0 12px; }
+p { color: var(--mut); }

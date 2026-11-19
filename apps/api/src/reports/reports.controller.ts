@@ -1,0 +1,21 @@
+import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { monthlyReportQuerySchema } from '@fulad/shared';
+import type { MonthlyReportQuery } from '@fulad/shared';
+import { AuthGuard } from '../auth/auth.guard';
+import { CurrentAuth, Roles, RolesGuard } from '../auth/roles';
+import type { AccessPayload } from '../auth/token';
+import { ZodPipe } from '../common/zod.pipe';
+import { ReportsService } from './reports.service';
+
+/** گزارش مالی فقط برای مدیر باشگاه است (پذیرش دسترسی ندارد) */
+@Controller('reports')
+@UseGuards(AuthGuard, RolesGuard)
+@Roles('OWNER')
+export class ReportsController {
+  constructor(private readonly reports: ReportsService) {}
+
+  @Get('monthly')
+  monthly(@CurrentAuth() auth: AccessPayload, @Query(new ZodPipe(monthlyReportQuerySchema)) q: MonthlyReportQuery) {
+    return this.reports.monthly(auth, q);
+  }
+}

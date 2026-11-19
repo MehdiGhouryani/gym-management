@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "name": "فولاد",
+    "slug": "fulad",
+    "scheme": "fulad",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "plugins": ["expo-router", "expo-secure-store"],
+    "android": { "package": "ir.fulad.manager" },
+    "ios": { "bundleIdentifier": "ir.fulad.manager" }
+  }
+}

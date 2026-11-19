@@ -1,0 +1,23 @@
+name: CI
+on: [push, pull_request]
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://fulad:fulad@localhost:5432/fulad_test
+      MIGRATE_DATABASE_URL: postgresql://fulad:fulad@localhost:5432/fulad_test
+      TZ: Asia/Tehran
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 10 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: sudo systemctl start postgresql.service
+      - run: sudo -u postgres psql -c "CREATE USER fulad WITH PASSWORD 'fulad' SUPERUSER;" -c "CREATE DATABASE fulad_test OWNER fulad;"
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm db:generate
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build
