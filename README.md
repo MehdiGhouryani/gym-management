@@ -2,6 +2,8 @@
 
 مونوریپوی MVP با TypeScript. بدون Docker: توسعه‌ی محلی روی PostgreSQL نصب‌شده و استقرار با PM2 و Nginx.
 
+> نقشه‌راه جامع ۲۵ فازی (صفر تا صد): [docs/ROADMAP.md](docs/ROADMAP.md)
+
 ## ساختار
 
 - `apps/api`: بک‌اند NestJS و Prisma (پورت ۴۰۰۰، مسیر `/api/v1`)
