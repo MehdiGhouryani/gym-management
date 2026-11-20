@@ -9,6 +9,10 @@ export const faToman = (n: number): string => `${n.toLocaleString('fa-IR')} تو
 export const faDate = (iso: string): string =>
   new Intl.DateTimeFormat('fa-IR', { dateStyle: 'medium' }).format(new Date(iso));
 
+/** تاریخ و ساعت شمسی فارسی */
+export const faDateTime = (iso: string): string =>
+  new Intl.DateTimeFormat('fa-IR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(iso));
+
 /** برچسب روش پرداخت */
 export const methodLabel: Record<string, string> = { CASH: 'نقدی', CARD: 'کارت', POS: 'کارت‌خوان' };
 

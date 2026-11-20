@@ -16,7 +16,7 @@ const bodies: BodySchemas = {
   gymUpdate: stub('j'), createStaff: stub('k'), freeze: stub('l'), refund: stub('m'),
   createLead: stub('n'), updateLead: stub('o'), checkin: stub('p'),
   createCoach: stub('q'), updateCoach: stub('r'), createClass: stub('s'), updateClass: stub('t'),
-  createSession: stub('u'), bookMember: stub('v'), bookingUpdate: stub('w'),
+  createSession: stub('u'), bookMember: stub('v'), bookingUpdate: stub('w'), publicLead: stub('x'),
 };
 const doc: any = buildOpenApi(bodies);
 const METHODS = ['get', 'post', 'patch', 'put', 'delete'];
@@ -60,9 +60,17 @@ describe('ساختار سند', () => {
     walk(doc.components);
     expect(missing.join()).toBe('');
   });
-  it('عملیات بدون نیاز به ورود فقط سلامت و ورود هستند', () => {
+  it('عملیات بدون نیاز به ورود فقط سلامت، ورود و سطح عمومی هستند', () => {
     const open = ops.filter(([, , o]) => o.security.length === 0).map(([m, p]) => `${m} ${p}`).sort();
-    expect(open).toEqual(['GET /health', 'POST /auth/logout', 'POST /auth/otp/request', 'POST /auth/otp/verify', 'POST /auth/refresh']);
+    expect(open).toEqual([
+      'GET /health',
+      'GET /public/gyms/{slug}',
+      'POST /auth/logout',
+      'POST /auth/otp/request',
+      'POST /auth/otp/verify',
+      'POST /auth/refresh',
+      'POST /public/gyms/{slug}/join',
+    ]);
   });
 });
 

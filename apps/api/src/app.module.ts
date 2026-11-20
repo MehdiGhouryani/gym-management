@@ -7,6 +7,8 @@ import { AttendanceModule } from './attendance/attendance.module';
 import { ClassesModule } from './classes/classes.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { LeadsModule } from './leads/leads.module';
+import { PortalModule } from './portal/portal.module';
+import { PublicModule } from './public/public.module';
 import { GymModule } from './gym/gym.module';
 import { HealthController } from './health.controller';
 import { MembersModule } from './members/members.module';
@@ -29,6 +31,8 @@ import { PrismaModule } from './prisma.module';
     LeadsModule,
     AttendanceModule,
     ClassesModule,
+    PortalModule,
+    PublicModule,
     PlansModule,
     SubscriptionsModule,
     ReportsModule,

@@ -187,6 +187,13 @@ export const createSessionSchema = z.object({
 
 export const bookingStatusSchema = z.enum(['BOOKED', 'CANCELLED', 'ATTENDED']);
 
+// ---------- سایت عمومی ----------
+export const publicLeadSchema = z.object({
+  name: textOf('نام', 2, 80),
+  phone: phoneSchema,
+  note: z.string().trim().max(300).optional(),
+});
+
 // ---------- CRM: سرنخ‌ها ----------
 export const leadStatusSchema = z.enum(['NEW', 'CONTACTED', 'TRIAL', 'CONVERTED', 'LOST']);
 
@@ -256,3 +263,4 @@ export type UpdateCoachInput = z.infer<typeof updateCoachSchema>;
 export type CreateClassInput = z.infer<typeof createClassSchema>;
 export type UpdateClassInput = z.infer<typeof updateClassSchema>;
 export type CreateSessionInput = z.infer<typeof createSessionSchema>;
+export type PublicLeadInput = z.infer<typeof publicLeadSchema>;

@@ -2,8 +2,8 @@ import { z } from 'zod';
 import {
   bookingStatusSchema, createClassSchema, createCoachSchema, createLeadSchema, createPlanSchema, createSessionSchema,
   createStaffSchema, freezeSchema, gymUpdateSchema, memberFieldsSchema, otpRequestSchema, otpVerifySchema, payDebtSchema,
-  refundSchema, refreshSchema, renewSchema, updateClassSchema, updateCoachSchema, updateLeadSchema, updateMemberSchema,
-  updatePlanSchema,
+  publicLeadSchema, refundSchema, refreshSchema, renewSchema, updateClassSchema, updateCoachSchema, updateLeadSchema,
+  updateMemberSchema, updatePlanSchema,
 } from '@fulad/shared';
 // طرح‌های کوچک محلّی
 const checkinSchema = z.object({ token: z.string().min(8).max(64) });
@@ -43,6 +43,7 @@ export function buildOpenApiDocument() {
     createSession: toSchema(createSessionSchema),
     bookMember: toSchema(bookMemberSchema),
     bookingUpdate: toSchema(bookingUpdateSchema),
+    publicLead: toSchema(publicLeadSchema),
   };
   return buildOpenApi(bodies);
 }

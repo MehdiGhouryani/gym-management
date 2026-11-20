@@ -25,6 +25,7 @@ export interface BodySchemas {
   createSession: JsonSchema;
   bookMember: JsonSchema;
   bookingUpdate: JsonSchema;
+  publicLead: JsonSchema;
 }
 
 const BODY_NAMES: Record<keyof BodySchemas, string> = {
@@ -51,6 +52,7 @@ const BODY_NAMES: Record<keyof BodySchemas, string> = {
   createSession: 'CreateSessionBody',
   bookMember: 'BookMemberBody',
   bookingUpdate: 'BookingUpdateBody',
+  publicLead: 'PublicLeadBody',
 };
 
 const ref = (name: string) => ({ $ref: `#/components/schemas/${name}` });
@@ -142,6 +144,26 @@ function componentSchemas(bodies: BodySchemas): Record<string, unknown> {
     }),
     BookingResult: obj({ bookingId: uuid, status: str({ enum: ['BOOKED', 'WAITLIST'] }) }),
     BookingUpdateResult: obj({ bookingId: uuid, status: str(), promotedId: nullable('uuid') }),
+    PublicGymProfile: obj({
+      slug: str(), name: str(), city: str(), address: nullable('string'), phone: nullable('string'),
+      plans: { type: 'array', items: obj({ name: str(), days: int(), price: int() }) },
+      sessions: { type: 'array', items: obj({ id: uuid, startsAt: dateTime, className: str(), coachName: nullable('string') }) },
+    }),
+    PortalMe: obj({
+      name: str(), gymName: str(), gymSlug: str(),
+      status: str({ enum: ['ACTIVE', 'EXPIRING', 'EXPIRED', 'NONE'] }),
+      daysLeft: nullable('integer'), currentEndsOn: nullable('date'),
+      planName: nullable('string'), sessionsRemaining: nullable('integer'),
+      balance: int(), qrToken: str(),
+      bookings: { type: 'array', items: obj({ id: uuid, status: str(), className: str(), startsAt: dateTime }) },
+    }),
+    PortalPayments: obj({
+      items: { type: 'array', items: obj({ id: uuid, amount: int(), method: str(), paidAt: dateTime }) },
+    }),
+    PortalAttendance: obj({
+      items: { type: 'array', items: obj({ id: uuid, checkInAt: dateTime }) },
+    }),
+    PortalOk: obj({ ok: { type: 'boolean' } }),
     ReminderRow: obj({
       id: uuid,
       template: str({ enum: ['expiring', 'expired', 'debt', 'receipt'] }),
@@ -486,6 +508,33 @@ export function buildOpenApi(bodies: BodySchemas) {
     ok: { code: 200, schema: 'BookingUpdateResult', description: 'به‌روزرسانی شد' }, errors: [...AUTHED, 400, 404],
   });
 
+  add('get', '/public/gyms/{slug}', {
+    tag: 'عمومی', summary: 'صفحه‌ی عمومی باشگاه', auth: false,
+    description: 'فقط باشگاه ACTIVE. معرفی، پلن‌ها و جلسه‌های پیشِ‌رو.',
+    ok: { code: 200, schema: 'PublicGymProfile', description: 'پروفایل' }, errors: [404, 429],
+  });
+  add('post', '/public/gyms/{slug}/join', {
+    tag: 'عمومی', summary: 'درخواست عضویت از سایت', auth: false, body: 'publicLead',
+    description: 'پاسخ همیشه یکسان است تا عضو بودن فاش نشود؛ ردیف در سرنخ‌های باشگاه ثبت می‌شود.',
+    ok: { code: 200, schema: 'PortalOk', description: 'ثبت شد' }, errors: [400, 404, 429],
+  });
+  add('get', '/portal/me', {
+    tag: 'پورتال اعضا', summary: 'کارت دیجیتال من', description: 'توکن عضو لازم است؛ عضو فقط داده‌ی خودش را می‌بیند.',
+    ok: { code: 200, schema: 'PortalMe', description: 'کارت من' }, errors: [401, 403],
+  });
+  add('get', '/portal/me/payments', {
+    tag: 'پورتال اعضا', summary: 'تاریخچه پرداخت‌های من',
+    ok: { code: 200, schema: 'PortalPayments', description: 'پرداخت‌ها' }, errors: [401, 403],
+  });
+  add('get', '/portal/me/attendance', {
+    tag: 'پورتال اعضا', summary: 'سابقه مراجعه‌ی من',
+    ok: { code: 200, schema: 'PortalAttendance', description: 'مراجعه‌ها' }, errors: [401, 403],
+  });
+  add('post', '/portal/renew-request', {
+    tag: 'پورتال اعضا', summary: 'درخواست تمدید اشتراک', description: 'در مرکز پیگیری مدیر به‌عنوان Request OPEN می‌آید؛ درخواست تکراری باز: ۴۰۹ REQUEST_OPEN.',
+    ok: { code: 200, schema: 'PortalOk', description: 'ثبت شد' }, errors: [401, 403, 409],
+  });
+
   add('get', '/leads', {
     tag: 'سرنخ‌ها', summary: 'فهرست سرنخ‌های فروش', description: 'چرخه: NEW → CONTACTED → TRIAL → CONVERTED/LOST.',
     query: [
@@ -631,7 +680,7 @@ export function buildOpenApi(bodies: BodySchemas) {
       description: 'مدیریت اعضا، اشتراک و پرداخت. همه‌ی مبلغ‌ها عدد صحیح به تومان و تاریخ‌ها میلادی (YYYY-MM-DD) هستند.',
     },
     servers: [{ url: '/api/v1' }],
-    tags: ['سلامت', 'باشگاه', 'ورود', 'اعضا', 'پلن‌ها', 'اشتراک و پرداخت', 'حضور و غیاب', 'گزارش', 'اعلان‌ها', 'سرنخ‌ها'].map((name) => ({ name })),
+    tags: ['سلامت', 'باشگاه', 'ورود', 'اعضا', 'پلن‌ها', 'اشتراک و پرداخت', 'حضور و غیاب', 'کلاس‌ها', 'گزارش', 'اعلان‌ها', 'سرنخ‌ها', 'عمومی', 'پورتال اعضا'].map((name) => ({ name })),
     paths,
     components: {
       securitySchemes: { bearerAuth: { type: 'http', scheme: 'bearer', description: 'accessToken از /auth/otp/verify' } },
