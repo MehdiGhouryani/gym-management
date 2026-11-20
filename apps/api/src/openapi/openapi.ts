@@ -431,6 +431,25 @@ export function buildOpenApi(bodies: BodySchemas) {
     ],
     ok: { code: 200, schema: 'PaymentsPage', description: 'پرداخت‌ها' }, errors: [...AUTHED, 400],
   });
+  add('get', '/payments/export.csv', {
+    tag: 'اشتراک و پرداخت', summary: 'خروجی CSV پرداخت‌ها', description: 'همان فیلتر فهرست بدون صفحه‌بندی؛ سقف ۵۰۰۰ ردیف؛ پاسخ CSV با BOM برای اکسل فارسی.',
+    query: [
+      { name: 'from', schema: date },
+      { name: 'to', schema: date },
+      { name: 'q', schema: str({ maxLength: 80 }) },
+    ],
+    ok: { code: 200, description: 'CSV' }, errors: [...AUTHED, 400],
+  });
+  add('get', '/members/export.csv', {
+    tag: 'اعضا', summary: 'خروجی CSV اعضا', description: 'همان فیلتر فهرست اعضا؛ سقف ۵۰۰۰ ردیف؛ CSV با BOM برای اکسل فارسی.',
+    query: [
+      { name: 'q', schema: str({ maxLength: 80 }) },
+      { name: 'status', schema: str({ enum: ['active', 'expiring', 'expired', 'lapsed', 'none'] }) },
+      { name: 'archived', schema: str({ enum: ['true', 'false'] }) },
+      { name: 'debtor', schema: str({ enum: ['true', 'false'] }) },
+    ],
+    ok: { code: 200, description: 'CSV' }, errors: [...AUTHED, 400],
+  });
   add('get', '/reminders', {
     tag: 'اعلان‌ها', summary: 'ردیابی یادآوری‌ها (فقط مدیر)', description: 'صف و وضعیت تحویل پیامک‌های یادآوری؛ ورکر روزانه صف را ارسال می‌کند.',
     query: [

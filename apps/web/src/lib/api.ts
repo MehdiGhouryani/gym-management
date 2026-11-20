@@ -76,3 +76,18 @@ export const api = createApiClient(
     accessToken = t;
   },
 );
+
+/** دانلود فایل (CSV) با توکن: لینک مستقیم هدر Authorization ندارد */
+export async function downloadFile(path: string, filename: string): Promise<void> {
+  const headers = new Headers();
+  if (accessToken) headers.set('authorization', `Bearer ${accessToken}`);
+  const res = await fetch(`${BASE}${path}`, { headers, credentials: 'include' });
+  if (!res.ok) throw new ApiError(res.status, 'دریافت فایل ناموفق بود');
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}

@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { Badge, DataTable, EmptyState, Pagination, StatCard, type Column } from '../../../src/ui/index';
+import { Badge, Button, DataTable, EmptyState, Pagination, StatCard, type Column } from '../../../src/ui/index';
+import { downloadFile } from '../../../src/lib/api';
 import { useApi } from '../../../src/lib/use-api';
 import { faNum, faToman, methodLabel } from '../../../src/lib/format';
 import { faDate, faNum as faDigits } from '../../../src/lib/format';
@@ -63,6 +64,19 @@ export default function PaymentsPage() {
     <div style={{ display: 'grid', gap: 14 }}>
       <div className="adm-page-head">
         <h1>پرداخت‌ها</h1>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            const p = new URLSearchParams();
+            if (fromIso) p.set('from', fromIso);
+            if (toIso) p.set('to', toIso);
+            if (search.trim()) p.set('q', search.trim());
+            void downloadFile(`/payments/export.csv?${p.toString()}`, 'payments.csv').catch(() => undefined);
+          }}
+        >
+          خروجی CSV
+        </Button>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
           <input
             className="u-input"

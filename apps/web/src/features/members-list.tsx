@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Badge, Button, DataTable, EmptyState, Pagination, Tabs, type Column } from '../ui/index';
+import { downloadFile } from '../lib/api';
 import { useApi } from '../lib/use-api';
 import { useSession } from '../lib/session';
 import { faNum, statusBadge } from '../lib/format';
@@ -102,9 +103,25 @@ export function MembersList() {
     <div style={{ display: 'grid', gap: 14 }}>
       <div className="adm-page-head">
         <h1>اعضا</h1>
-        <Link href="/admin/members/new">
-          <Button variant="primary" size="sm">+ عضو جدید</Button>
-        </Link>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              const p = new URLSearchParams();
+              if (search.trim()) p.set('q', search.trim());
+              if (status) p.set('status', status);
+              if (debtor) p.set('debtor', 'true');
+              if (archived) p.set('archived', 'true');
+              void downloadFile(`/members/export.csv?${p.toString()}`, 'members.csv').catch(() => undefined);
+            }}
+          >
+            خروجی CSV
+          </Button>
+          <Link href="/admin/members/new">
+            <Button variant="primary" size="sm">+ عضو جدید</Button>
+          </Link>
+        </div>
       </div>
 
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>

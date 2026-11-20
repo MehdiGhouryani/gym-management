@@ -57,4 +57,29 @@ export class PaymentsService {
       };
     });
   }
+
+  /** خروجی CSV همان فیلتر فهرست پرداخت‌ها (بدون صفحه‌بندی، سقف ۵۰۰۰ ردیف) */
+  async exportCsv(auth: { gymId: string }, f: { from?: string; to?: string; q?: string }) {
+    const where = paymentsWhere(auth.gymId, f);
+    return this.tenant.run(auth.gymId, async (tx) => {
+      const rows = await tx.payment.findMany({
+        where,
+        orderBy: { paidAt: 'desc' },
+        take: 5000,
+        select: {
+          amount: true,
+          method: true,
+          paidAt: true,
+          subscription: { select: { member: { select: { name: true, phone: true } } } },
+        },
+      });
+      return rows.map((p) => ({
+        name: p.subscription.member.name,
+        phone: p.subscription.member.phone,
+        amount: p.amount,
+        method: p.method,
+        paidAt: p.paidAt.toISOString(),
+      }));
+    });
+  }
 }

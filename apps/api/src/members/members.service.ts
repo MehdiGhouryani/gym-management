@@ -1,10 +1,10 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { parseMemberSearch, todayInTehran } from '@fulad/shared';
+import { parseMemberSearch, subscriptionStatus, todayInTehran } from '@fulad/shared';
 import type { ListMembersQuery, MemberFieldsInput, StatusOptions, UpdateMemberInput } from '@fulad/shared';
 import { writeAudit } from '../audit/audit';
 import type { AccessPayload } from '../auth/token';
-import { fromDateOnly, isPlausibleBirthDate } from '../common/dates';
+import { fromDateOnly, isPlausibleBirthDate, toDateOnly } from '../common/dates';
 import { PrismaService } from '../prisma.service';
 import { TenantService } from '../tenant/tenant.service';
 import { endsOnWhere } from './member-query';
@@ -168,6 +168,38 @@ export class MembersService {
         select: { id: true, action: true, meta: true, at: true },
       });
       return { items: rows.map((r) => ({ id: r.id, action: r.action, at: r.at.toISOString(), meta: r.meta })) };
+    });
+  }
+
+  /** ردیف‌های خروجی CSV اعضا (همان فیلتر فهرست) */
+  async exportRows(auth: AccessPayload, q: ListMembersQuery) {
+    if (q.archived && auth.role !== 'OWNER') throw new ForbiddenException('فقط مدیر باشگاه به بایگانی دسترسی دارد');
+    const opts = await this.settings(auth.gymId);
+    const today = todayInTehran();
+    const and: Prisma.MemberWhereInput[] = [];
+    const s = parseMemberSearch(q.q);
+    if (s.name) and.push({ name: { contains: s.name, mode: 'insensitive' } });
+    if (s.phone) and.push({ phone: { contains: s.phone } });
+    if (q.status) and.push(endsOnWhere(q.status, today, opts));
+    if (q.debtor) and.push({ balance: { gt: 0 } });
+    const where: Prisma.MemberWhereInput = { gymId: auth.gymId, archivedAt: q.archived ? { not: null } : null, AND: and };
+    const orderBy: Prisma.MemberOrderByWithRelationInput[] = [{ currentEndsOn: { sort: 'asc', nulls: 'last' } }, { name: 'asc' }];
+
+    return this.tenant.run(auth.gymId, async (tx) => {
+      const rows = await tx.member.findMany({
+        where,
+        orderBy,
+        take: 5000,
+        select: { name: true, phone: true, currentEndsOn: true, balance: true, createdAt: true },
+      });
+      return rows.map((m) => ({
+        name: m.name,
+        phone: m.phone,
+        status: subscriptionStatus(m.currentEndsOn, today, opts).status,
+        currentEndsOn: m.currentEndsOn ? toDateOnly(m.currentEndsOn) : '',
+        balance: m.balance,
+        createdAt: todayInTehran(m.createdAt),
+      }));
     });
   }
 
