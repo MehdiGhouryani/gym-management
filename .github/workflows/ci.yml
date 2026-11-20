@@ -34,3 +34,10 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm build
+      - name: Seed and run E2E (Playwright)
+        run: |
+          pnpm db:seed
+          pnpm --filter @fulad/web exec playwright install --with-deps chromium
+          pnpm --filter @fulad/web exec playwright test
+        env:
+          OTP_FIXED_CODE: '12345'

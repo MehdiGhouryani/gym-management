@@ -76,7 +76,9 @@ export class AuthService {
     }
 
     const eligible = await this.isEligible(phone, purpose, gymSlug);
-    const code = generateOtpCode();
+    // قلاب آزمایشی E2E: کد ثابت فقط خارج از production (OTP_FIXED_CODE)
+    const fixed = process.env.OTP_FIXED_CODE;
+    const code = fixed && process.env.NODE_ENV !== 'production' ? fixed : generateOtpCode();
     // برای شماره‌های ثبت‌نشده هم ردیف ساخته می‌شود تا محدودیت‌ها یکسان رفتار کنند
     await this.prisma.otpCode.create({
       data: {
