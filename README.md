@@ -2,7 +2,7 @@
 
 مونوریپوی MVP با TypeScript. بدون Docker: توسعه‌ی محلی روی PostgreSQL نصب‌شده و استقرار با PM2 و Nginx.
 
-> نقشه‌راه جامع ۲۵ فازی (صفر تا صد): [docs/ROADMAP.md](docs/ROADMAP.md)
+> نقشه‌راه جامع ۲۵ فازی (صفر تا صد): [docs/ROADMAP.md](docs/ROADMAP.md) — **وضعیت: فازهای ۱–۱۷ و ۱۹–۲۳ پیاده‌سازی شده، v0.9.0-beta آماده استقرار** ([CHANGELOG](CHANGELOG.md) · [کتاب عملیات](docs/OPERATIONS.md) · [تصمیم‌های معماری](docs/adr))
 
 ## ساختار
 
