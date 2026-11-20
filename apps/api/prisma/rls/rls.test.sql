@@ -16,6 +16,10 @@ CREATE TABLE plan_price_histories (id text PRIMARY KEY, "gymId" text NOT NULL RE
 CREATE TABLE refunds (id text PRIMARY KEY, "gymId" text NOT NULL REFERENCES gyms(id));
 CREATE TABLE leads (id text PRIMARY KEY, "gymId" text NOT NULL REFERENCES gyms(id));
 CREATE TABLE attendances (id text PRIMARY KEY, "gymId" text NOT NULL REFERENCES gyms(id));
+CREATE TABLE coaches (id text PRIMARY KEY, "gymId" text NOT NULL REFERENCES gyms(id));
+CREATE TABLE classes (id text PRIMARY KEY, "gymId" text NOT NULL REFERENCES gyms(id));
+CREATE TABLE class_sessions (id text PRIMARY KEY, "gymId" text NOT NULL REFERENCES gyms(id));
+CREATE TABLE bookings (id text PRIMARY KEY, "gymId" text NOT NULL REFERENCES gyms(id));
 \ir 001_tenant_rls.sql
 
 CREATE ROLE rls_tester NOSUPERUSER NOBYPASSRLS;
