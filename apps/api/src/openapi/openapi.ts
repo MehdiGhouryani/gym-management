@@ -17,6 +17,7 @@ export interface BodySchemas {
   refund: JsonSchema;
   createLead: JsonSchema;
   updateLead: JsonSchema;
+  checkin: JsonSchema;
 }
 
 const BODY_NAMES: Record<keyof BodySchemas, string> = {
@@ -35,6 +36,7 @@ const BODY_NAMES: Record<keyof BodySchemas, string> = {
   refund: 'RefundBody',
   createLead: 'CreateLeadBody',
   updateLead: 'UpdateLeadBody',
+  checkin: 'CheckInBody',
 };
 
 const ref = (name: string) => ({ $ref: `#/components/schemas/${name}` });
@@ -95,6 +97,18 @@ function componentSchemas(bodies: BodySchemas): Record<string, unknown> {
     }),
     SessionsPage: obj({ items: { type: 'array', items: ref('Session') } }),
     RevokeResult: obj({ ok: { type: 'boolean' }, revoked: int({ description: 'تعداد نشست باطل‌شده' }) }),
+    CheckInResult: obj({
+      memberId: uuid, name: str(),
+      status: str({ enum: ['ACTIVE', 'EXPIRING', 'EXPIRED', 'NONE'] }),
+      daysLeft: nullable('integer'), balance: int(),
+      sessionsRemaining: nullable('integer'),
+    }),
+    AttendanceRow: obj({ id: uuid, method: str({ enum: ['QR', 'MANUAL'] }), note: nullable('string'), checkInAt: dateTime }),
+    AttendancePage: obj({
+      items: { type: 'array', items: ref('AttendanceRow') },
+      total: int(), page: int(), limit: int(), pages: int(),
+    }),
+    QrToken: obj({ qrToken: str({ description: 'توکن امن ورود؛ در QR گذاشته می‌شود' }) }),
     ReminderRow: obj({
       id: uuid,
       template: str({ enum: ['expiring', 'expired', 'debt', 'receipt'] }),
@@ -371,6 +385,25 @@ export function buildOpenApi(bodies: BodySchemas) {
     ok: { code: 200, schema: 'RemindersPage', description: 'یادآوری‌ها' }, errors: AUTHED,
   });
 
+  add('post', '/checkin', {
+    tag: 'حضور و غیاب', summary: 'اسکن QR و ثبت ورود', body: 'checkin',
+    description: 'توکن امن عضو. ورود تکراری در همان روز: ۴۰۹ CHECKIN_DUPLICATE. اشتراک منقضی/بدون اشتراک/بدون جلسه: ۴۰۹.',
+    ok: { code: 201, schema: 'CheckInResult', description: 'ورود ثبت شد' }, errors: [...AUTHED, 400, 404, 409],
+  });
+  add('post', '/members/{id}/attendance', {
+    tag: 'حضور و غیاب', summary: 'ثبت دستی ورود با علت',
+    ok: { code: 201, schema: 'AttendanceRow', description: 'ثبت شد' }, errors: [...AUTHED, 400, 404],
+  });
+  add('get', '/members/{id}/attendance', {
+    tag: 'حضور و غیاب', summary: 'سوابق مراجعه‌ی عضو',
+    ok: { code: 200, schema: 'AttendancePage', description: 'سوابق' }, errors: AUTHED,
+  });
+  add('get', '/members/{id}/qr', {
+    tag: 'حضور و غیاب', summary: 'کارت QR عضو', description: 'regenerate=true فقط مدیر: توکن قبلی باطل و توکن تازه صادر می‌شود.',
+    query: [{ name: 'regenerate', schema: str({ enum: ['true', 'false'] }) }],
+    ok: { code: 200, schema: 'QrToken', description: 'توکن' }, errors: [...AUTHED, 404],
+  });
+
   add('get', '/leads', {
     tag: 'سرنخ‌ها', summary: 'فهرست سرنخ‌های فروش', description: 'چرخه: NEW → CONTACTED → TRIAL → CONVERTED/LOST.',
     query: [
@@ -516,7 +549,7 @@ export function buildOpenApi(bodies: BodySchemas) {
       description: 'مدیریت اعضا، اشتراک و پرداخت. همه‌ی مبلغ‌ها عدد صحیح به تومان و تاریخ‌ها میلادی (YYYY-MM-DD) هستند.',
     },
     servers: [{ url: '/api/v1' }],
-    tags: ['سلامت', 'باشگاه', 'ورود', 'اعضا', 'پلن‌ها', 'اشتراک و پرداخت', 'گزارش', 'اعلان‌ها'].map((name) => ({ name })),
+    tags: ['سلامت', 'باشگاه', 'ورود', 'اعضا', 'پلن‌ها', 'اشتراک و پرداخت', 'حضور و غیاب', 'گزارش', 'اعلان‌ها', 'سرنخ‌ها'].map((name) => ({ name })),
     paths,
     components: {
       securitySchemes: { bearerAuth: { type: 'http', scheme: 'bearer', description: 'accessToken از /auth/otp/verify' } },

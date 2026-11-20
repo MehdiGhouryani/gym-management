@@ -6,6 +6,7 @@ import { Badge, Button, DataTable, Dialog, EmptyState, Field, Input, Skeleton, S
 import { MemberFields, memberFormFromMember, memberFormToInput, type MemberFormValues } from '../../../../src/features/member-fields';
 import { PayDebtDialog } from '../../../../src/features/pay-debt-dialog';
 import { RefundDialog } from '../../../../src/features/refund-dialog';
+import { QrCard } from '../../../../src/features/qr-card';
 import { RenewDialog } from '../../../../src/features/renew-dialog';
 import { api } from '../../../../src/lib/api';
 import { useApi } from '../../../../src/lib/use-api';
@@ -50,6 +51,8 @@ export default function MemberProfilePage() {
   const member = useApi<Member>(`/members/${id}`);
   const history = useApi<SubscriptionHistory>(`/members/${id}/subscriptions`);
   const timeline = useApi<MemberTimeline>(isOwner ? `/members/${id}/timeline` : null);
+  const attendance = useApi<{ items: { id: string; method: string; note: string | null; checkInAt: string }[]; total: number }>(`/members/${id}/attendance`);
+  const [qrShown, setQrShown] = useState(false);
 
   const [renewOpen, setRenewOpen] = useState(false);
   const [payOpen, setPayOpen] = useState(false);
@@ -354,6 +357,34 @@ export default function MemberProfilePage() {
       <p style={{ fontSize: 12, color: 'var(--mut)', margin: 0 }}>
         عضو از {toJalaliString(m.createdAt.slice(0, 10))} در باشگاه است.
       </p>
+
+      {/* حضور و غیاب و کارت QR */}
+      <div>
+        <div className="adm-page-head">
+          <h2 style={{ fontSize: 14, margin: 0 }}>حضور و غیاب — {faNum(attendance.data?.total ?? 0)} مراجعه</h2>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <Button variant="tint" size="sm" onClick={() => void api.post(`/members/${id}/attendance`).then(refreshAll)}>
+              ثبت ورود دستی
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => setQrShown((v) => !v)}>
+              {qrShown ? 'بستن کارت' : 'کارت QR'}
+            </Button>
+          </div>
+        </div>
+        {attendance.data && attendance.data.items.length > 0 ? (
+          <div style={{ display: 'grid', gap: 6, fontSize: 13 }}>
+            {attendance.data.items.slice(0, 10).map((a) => (
+              <div key={a.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 10 }}>
+                <span>{a.method === 'QR' ? 'اسکن QR' : `دستی${a.note ? ` — ${a.note}` : ''}`}</span>
+                <span style={{ color: 'var(--mut)' }}>{faDate(a.checkInAt)}</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p style={{ fontSize: 13, color: 'var(--mut)' }}>مراجعه‌ای ثبت نشده است.</p>
+        )}
+        {qrShown ? <QrCard memberId={id} /> : null}
+      </div>
 
       {isOwner ? (
         <div>

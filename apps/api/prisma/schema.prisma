@@ -48,6 +48,11 @@ enum RequestStatus {
   REJECTED
 }
 
+enum CheckInMethod {
+  QR
+  MANUAL
+}
+
 enum LeadStatus {
   NEW
   CONTACTED
@@ -79,6 +84,7 @@ model Gym {
   planPriceHistories PlanPriceHistory[]
   refunds       Refund[]
   leads         Lead[]
+  attendances   Attendance[]
 
   @@map("gyms")
 }
@@ -115,10 +121,13 @@ model Member {
   smsOptOut     Boolean        @default(false)
   /** برچسب‌های آزاد برای دسته‌بندی (مثل «کشتی»، «کراس‌فیت») */
   tags          String[]       @default([])
+  /** توکن امن QR ورود — بدون اطلاعات خصوصی؛ فقط برای اسکن پذیرش */
+  qrToken       String         @unique @default(uuid())
   createdAt     DateTime       @default(now())
   subscriptions Subscription[]
   refunds       Refund[]
   leads         Lead[]
+  attendances   Attendance[]
   reminders     Reminder[]
   requests      Request[]
 
@@ -227,6 +236,23 @@ model Lead {
   @@unique([gymId, phone])
   @@index([gymId, status])
   @@map("leads")
+}
+
+/// حضور و غیاب: ورود با اسکن QR یا ثبت دستی با علت
+model Attendance {
+  id            String        @id @default(uuid())
+  gymId         String
+  gym           Gym           @relation(fields: [gymId], references: [id])
+  memberId      String
+  member        Member        @relation(fields: [memberId, gymId], references: [id, gymId])
+  method        CheckInMethod @default(QR)
+  /** برای ثبت دستی: چرا ورود دستی بود */
+  note          String?
+  checkInAt     DateTime      @default(now())
+
+  @@index([gymId, checkInAt])
+  @@index([memberId, checkInAt])
+  @@map("attendances")
 }
 
 model Refund {

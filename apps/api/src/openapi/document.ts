@@ -4,6 +4,8 @@ import {
   otpRequestSchema, otpVerifySchema, payDebtSchema, refundSchema, refreshSchema, renewSchema, updateLeadSchema,
   updateMemberSchema, updatePlanSchema,
 } from '@fulad/shared';
+// طرح اسکن QR در همین‌جا تعریف می‌شود (فقط همین مسیر مصرفش دارد)
+const checkinSchema = z.object({ token: z.string().min(8).max(64) });
 import { buildOpenApi } from './openapi';
 import type { BodySchemas, JsonSchema } from './openapi';
 
@@ -30,6 +32,7 @@ export function buildOpenApiDocument() {
     refund: toSchema(refundSchema),
     createLead: toSchema(createLeadSchema),
     updateLead: toSchema(updateLeadSchema),
+    checkin: toSchema(checkinSchema),
   };
   return buildOpenApi(bodies);
 }

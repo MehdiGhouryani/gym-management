@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
-import { BarChart3, CreditCard, LayoutDashboard, LogOut, Menu, Moon, Settings, UserPlus, Users, Wallet, X } from 'lucide-react';
+import { BarChart3, CreditCard, LayoutDashboard, LogOut, Menu, Moon, ScanLine, Settings, UserPlus, Users, Wallet, X } from 'lucide-react';
 import './admin.css';
 import { Badge, Button } from './index';
 import { useSession } from '../lib/session';
@@ -19,6 +19,7 @@ interface NavItem {
 
 const NAV: NavItem[] = [
   { href: '/admin', label: 'داشبورد', icon: <LayoutDashboard size={18} /> },
+  { href: '/admin/checkin', label: 'ورود با QR', icon: <ScanLine size={18} /> },
   { href: '/admin/members', label: 'اعضا', icon: <Users size={18} /> },
   { href: '/admin/leads', label: 'سرنخ‌ها', icon: <UserPlus size={18} /> },
   { href: '/admin/plans', label: 'پلن‌ها', icon: <CreditCard size={18} /> },

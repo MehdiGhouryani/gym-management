@@ -15,6 +15,7 @@ CREATE TABLE idempotency_keys (id text PRIMARY KEY, "gymId" text NOT NULL REFERE
 CREATE TABLE plan_price_histories (id text PRIMARY KEY, "gymId" text NOT NULL REFERENCES gyms(id));
 CREATE TABLE refunds (id text PRIMARY KEY, "gymId" text NOT NULL REFERENCES gyms(id));
 CREATE TABLE leads (id text PRIMARY KEY, "gymId" text NOT NULL REFERENCES gyms(id));
+CREATE TABLE attendances (id text PRIMARY KEY, "gymId" text NOT NULL REFERENCES gyms(id));
 \ir 001_tenant_rls.sql
 
 CREATE ROLE rls_tester NOSUPERUSER NOBYPASSRLS;
