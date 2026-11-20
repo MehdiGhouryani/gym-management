@@ -15,6 +15,8 @@ const bodies: BodySchemas = {
   createPlan: stub('f'), updatePlan: stub('g'), renew: stub('h'), payDebt: stub('i'),
   gymUpdate: stub('j'), createStaff: stub('k'), freeze: stub('l'), refund: stub('m'),
   createLead: stub('n'), updateLead: stub('o'), checkin: stub('p'),
+  createCoach: stub('q'), updateCoach: stub('r'), createClass: stub('s'), updateClass: stub('t'),
+  createSession: stub('u'), bookMember: stub('v'), bookingUpdate: stub('w'),
 };
 const doc: any = buildOpenApi(bodies);
 const METHODS = ['get', 'post', 'patch', 'put', 'delete'];

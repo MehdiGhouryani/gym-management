@@ -148,6 +148,45 @@ export const renewSchema = z
 
 export const freezeSchema = z.object({ days: z.number().int().min(1).max(30) });
 
+// ---------- کلاس‌ها و رزرو ----------
+export const createCoachSchema = z.object({
+  name: textOf('نام مربی', 2, 80),
+  specialty: z.string().trim().max(80).optional(),
+  phone: phoneSchema.nullable().optional(),
+});
+
+export const updateCoachSchema = z
+  .object({
+    name: textOf('نام مربی', 2, 80).optional(),
+    specialty: z.string().trim().max(80).nullable().optional(),
+    phone: phoneSchema.nullable().optional(),
+    active: z.boolean().optional(),
+  })
+  .refine((v) => Object.values(v).some((x) => x !== undefined), 'حداقل یک فیلد لازم است');
+
+export const createClassSchema = z.object({
+  name: textOf('نام کلاس', 2, 60),
+  coachId: z.uuid().nullable().optional(),
+  capacity: z.number().int().min(1).max(200).default(12),
+  durationMin: z.number().int().min(15).max(300).default(60),
+});
+
+export const updateClassSchema = z
+  .object({
+    name: textOf('نام کلاس', 2, 60).optional(),
+    coachId: z.uuid().nullable().optional(),
+    capacity: z.number().int().min(1).max(200).optional(),
+    durationMin: z.number().int().min(15).max(300).optional(),
+    active: z.boolean().optional(),
+  })
+  .refine((v) => Object.values(v).some((x) => x !== undefined), 'حداقل یک فیلد لازم است');
+
+export const createSessionSchema = z.object({
+  startsAt: z.string().datetime({ offset: true }),
+});
+
+export const bookingStatusSchema = z.enum(['BOOKED', 'CANCELLED', 'ATTENDED']);
+
 // ---------- CRM: سرنخ‌ها ----------
 export const leadStatusSchema = z.enum(['NEW', 'CONTACTED', 'TRIAL', 'CONVERTED', 'LOST']);
 
@@ -212,3 +251,8 @@ export type FreezeInput = z.infer<typeof freezeSchema>;
 export type RefundInput = z.infer<typeof refundSchema>;
 export type CreateLeadInput = z.infer<typeof createLeadSchema>;
 export type UpdateLeadInput = z.infer<typeof updateLeadSchema>;
+export type CreateCoachInput = z.infer<typeof createCoachSchema>;
+export type UpdateCoachInput = z.infer<typeof updateCoachSchema>;
+export type CreateClassInput = z.infer<typeof createClassSchema>;
+export type UpdateClassInput = z.infer<typeof updateClassSchema>;
+export type CreateSessionInput = z.infer<typeof createSessionSchema>;

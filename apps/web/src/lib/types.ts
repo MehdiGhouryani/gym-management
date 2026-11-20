@@ -128,3 +128,31 @@ export interface PayResult {
   allocations: { subscriptionId: string; amount: number }[];
   balance: number;
 }
+
+export interface GymClass {
+  id: string;
+  name: string;
+  coachId: string | null;
+  coachName: string | null;
+  capacity: number;
+  durationMin: number;
+  active: boolean;
+  sessions: { id: string; startsAt: string }[];
+}
+
+export interface ClassSessionRow {
+  id: string;
+  startsAt: string;
+  booked: number;
+  waitlist: number;
+  capacity: number;
+}
+
+export interface Booking {
+  id: string;
+  status: 'BOOKED' | 'CANCELLED' | 'ATTENDED' | 'WAITLIST';
+  memberId: string;
+  memberName: string;
+  memberPhone: string;
+  createdAt: string;
+}

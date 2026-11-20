@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
-import { BarChart3, CreditCard, LayoutDashboard, LogOut, Menu, Moon, ScanLine, Settings, UserPlus, Users, Wallet, X } from 'lucide-react';
+import { BarChart3, CreditCard, Dumbbell, LayoutDashboard, LogOut, Menu, Moon, ScanLine, Settings, UserPlus, Users, Wallet, X } from 'lucide-react';
 import './admin.css';
 import { Badge, Button } from './index';
 import { useSession } from '../lib/session';
@@ -24,6 +24,7 @@ const NAV: NavItem[] = [
   { href: '/admin/leads', label: 'سرنخ‌ها', icon: <UserPlus size={18} /> },
   { href: '/admin/plans', label: 'پلن‌ها', icon: <CreditCard size={18} /> },
   { href: '/admin/payments', label: 'پرداخت‌ها', icon: <Wallet size={18} /> },
+  { href: '/admin/classes', label: 'کلاس‌ها', icon: <Dumbbell size={18} /> },
   { href: '/admin/reports', label: 'گزارش‌ها', icon: <BarChart3 size={18} />, ownerOnly: true },
   { href: '/admin/settings', label: 'تنظیمات', icon: <Settings size={18} />, ownerOnly: true },
 ];

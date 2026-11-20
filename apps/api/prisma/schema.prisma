@@ -53,6 +53,13 @@ enum CheckInMethod {
   MANUAL
 }
 
+enum BookingStatus {
+  BOOKED
+  CANCELLED
+  ATTENDED
+  WAITLIST
+}
+
 enum LeadStatus {
   NEW
   CONTACTED
@@ -85,6 +92,10 @@ model Gym {
   refunds       Refund[]
   leads         Lead[]
   attendances   Attendance[]
+  bookings      Booking[]
+  coaches       Coach[]
+  classes       Class[]
+  classSessions ClassSession[]
 
   @@map("gyms")
 }
@@ -129,6 +140,7 @@ model Member {
   leads         Lead[]
   attendances   Attendance[]
   reminders     Reminder[]
+  bookings      Booking[]
   requests      Request[]
 
   @@unique([gymId, phone])
@@ -253,6 +265,77 @@ model Attendance {
   @@index([gymId, checkInAt])
   @@index([memberId, checkInAt])
   @@map("attendances")
+}
+
+/// مربی باشگاه
+model Coach {
+  id        String  @id @default(uuid())
+  gymId     String
+  gym       Gym     @relation(fields: [gymId], references: [id])
+  name      String
+  specialty String?
+  phone     String?
+  active    Boolean @default(true)
+  classes   Class[]
+
+  @@unique([id, gymId])
+
+  @@index([gymId])
+  @@map("coaches")
+}
+
+/// کلاس گروهی با مربی و ظرفیت
+model Class {
+  id         String         @id @default(uuid())
+  gymId      String
+  gym        Gym            @relation(fields: [gymId], references: [id])
+  coachId    String?
+  coach      Coach?         @relation(fields: [coachId, gymId], references: [id, gymId])
+  name       String
+  capacity   Int            @default(12)
+  /** مدت جلسه (دقیقه) */
+  durationMin Int           @default(60)
+  active     Boolean        @default(true)
+  sessions   ClassSession[]
+
+  @@unique([id, gymId])
+
+  @@unique([gymId, name])
+  @@index([gymId])
+  @@map("classes")
+}
+
+/// یک جلسه‌ی برگزاری کلاس
+model ClassSession {
+  id        String   @id @default(uuid())
+  gymId     String
+  gym       Gym      @relation(fields: [gymId], references: [id])
+  classId   String
+  class     Class    @relation(fields: [classId, gymId], references: [id, gymId])
+  startsAt  DateTime
+  bookings  Booking[]
+
+  @@unique([id, gymId])
+
+  @@index([gymId, classId, startsAt])
+  @@map("class_sessions")
+}
+
+/// رزرو عضو؛ پر شدن ظرفیت → WAITLIST و با لغو، اول انتظار ارتقا می‌یابد
+model Booking {
+  id        String        @id @default(uuid())
+  gymId     String
+  gym       Gym           @relation(fields: [gymId], references: [id])
+  sessionId String
+  session   ClassSession  @relation(fields: [sessionId, gymId], references: [id, gymId])
+  memberId  String
+  member    Member        @relation(fields: [memberId, gymId], references: [id, gymId])
+  status    BookingStatus @default(BOOKED)
+  createdAt DateTime      @default(now())
+
+  @@unique([sessionId, memberId])
+  @@index([gymId, sessionId, status])
+  @@map("bookings")
 }
 
 model Refund {

@@ -1,11 +1,14 @@
 import { z } from 'zod';
 import {
-  createLeadSchema, createPlanSchema, createStaffSchema, freezeSchema, gymUpdateSchema, memberFieldsSchema,
-  otpRequestSchema, otpVerifySchema, payDebtSchema, refundSchema, refreshSchema, renewSchema, updateLeadSchema,
-  updateMemberSchema, updatePlanSchema,
+  bookingStatusSchema, createClassSchema, createCoachSchema, createLeadSchema, createPlanSchema, createSessionSchema,
+  createStaffSchema, freezeSchema, gymUpdateSchema, memberFieldsSchema, otpRequestSchema, otpVerifySchema, payDebtSchema,
+  refundSchema, refreshSchema, renewSchema, updateClassSchema, updateCoachSchema, updateLeadSchema, updateMemberSchema,
+  updatePlanSchema,
 } from '@fulad/shared';
-// طرح اسکن QR در همین‌جا تعریف می‌شود (فقط همین مسیر مصرفش دارد)
+// طرح‌های کوچک محلّی
 const checkinSchema = z.object({ token: z.string().min(8).max(64) });
+const bookMemberSchema = z.object({ memberId: z.string().uuid() });
+const bookingUpdateSchema = z.object({ status: bookingStatusSchema });
 import { buildOpenApi } from './openapi';
 import type { BodySchemas, JsonSchema } from './openapi';
 
@@ -33,6 +36,13 @@ export function buildOpenApiDocument() {
     createLead: toSchema(createLeadSchema),
     updateLead: toSchema(updateLeadSchema),
     checkin: toSchema(checkinSchema),
+    createCoach: toSchema(createCoachSchema),
+    updateCoach: toSchema(updateCoachSchema),
+    createClass: toSchema(createClassSchema),
+    updateClass: toSchema(updateClassSchema),
+    createSession: toSchema(createSessionSchema),
+    bookMember: toSchema(bookMemberSchema),
+    bookingUpdate: toSchema(bookingUpdateSchema),
   };
   return buildOpenApi(bodies);
 }

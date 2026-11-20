@@ -18,6 +18,13 @@ export interface BodySchemas {
   createLead: JsonSchema;
   updateLead: JsonSchema;
   checkin: JsonSchema;
+  createCoach: JsonSchema;
+  updateCoach: JsonSchema;
+  createClass: JsonSchema;
+  updateClass: JsonSchema;
+  createSession: JsonSchema;
+  bookMember: JsonSchema;
+  bookingUpdate: JsonSchema;
 }
 
 const BODY_NAMES: Record<keyof BodySchemas, string> = {
@@ -37,6 +44,13 @@ const BODY_NAMES: Record<keyof BodySchemas, string> = {
   createLead: 'CreateLeadBody',
   updateLead: 'UpdateLeadBody',
   checkin: 'CheckInBody',
+  createCoach: 'CreateCoachBody',
+  updateCoach: 'UpdateCoachBody',
+  createClass: 'CreateClassBody',
+  updateClass: 'UpdateClassBody',
+  createSession: 'CreateSessionBody',
+  bookMember: 'BookMemberBody',
+  bookingUpdate: 'BookingUpdateBody',
 };
 
 const ref = (name: string) => ({ $ref: `#/components/schemas/${name}` });
@@ -109,6 +123,25 @@ function componentSchemas(bodies: BodySchemas): Record<string, unknown> {
       total: int(), page: int(), limit: int(), pages: int(),
     }),
     QrToken: obj({ qrToken: str({ description: 'توکن امن ورود؛ در QR گذاشته می‌شود' }) }),
+    Coach: obj({ id: uuid, name: str(), specialty: nullable('string'), phone: nullable('string'), active: { type: 'boolean' } }),
+    GymClass: obj({
+      id: uuid, name: str(), coachId: nullable('uuid'), coachName: nullable('string'),
+      capacity: int(), durationMin: int(), active: { type: 'boolean' },
+    }),
+    ClassSessionRow: obj({
+      id: uuid, startsAt: dateTime, booked: int(), waitlist: int(), capacity: int(),
+    }),
+    BookingRow: obj({
+      id: uuid,
+      status: str({ enum: ['BOOKED', 'CANCELLED', 'ATTENDED', 'WAITLIST'] }),
+      memberId: uuid, memberName: str(), memberPhone: str(), createdAt: dateTime,
+    }),
+    SessionBookings: obj({
+      session: obj({ id: uuid, startsAt: dateTime, className: str(), capacity: int() }),
+      items: { type: 'array', items: ref('BookingRow') },
+    }),
+    BookingResult: obj({ bookingId: uuid, status: str({ enum: ['BOOKED', 'WAITLIST'] }) }),
+    BookingUpdateResult: obj({ bookingId: uuid, status: str(), promotedId: nullable('uuid') }),
     ReminderRow: obj({
       id: uuid,
       template: str({ enum: ['expiring', 'expired', 'debt', 'receipt'] }),
@@ -402,6 +435,55 @@ export function buildOpenApi(bodies: BodySchemas) {
     tag: 'حضور و غیاب', summary: 'کارت QR عضو', description: 'regenerate=true فقط مدیر: توکن قبلی باطل و توکن تازه صادر می‌شود.',
     query: [{ name: 'regenerate', schema: str({ enum: ['true', 'false'] }) }],
     ok: { code: 200, schema: 'QrToken', description: 'توکن' }, errors: [...AUTHED, 404],
+  });
+
+  add('get', '/coaches', {
+    tag: 'کلاس‌ها', summary: 'فهرست مربیان',
+    ok: { code: 200, description: 'آرایه‌ی مربیان' }, errors: AUTHED,
+  });
+  add('post', '/coaches', {
+    tag: 'کلاس‌ها', summary: 'افزودن مربی (فقط مدیر)', body: 'createCoach',
+    ok: { code: 201, schema: 'Coach', description: 'ساخته شد' }, errors: [...AUTHED, 400],
+  });
+  add('patch', '/coaches/{id}', {
+    tag: 'کلاس‌ها', summary: 'ویرایش مربی (فقط مدیر)', body: 'updateCoach',
+    ok: { code: 200, schema: 'Coach', description: 'ویرایش شد' }, errors: [...AUTHED, 400, 404],
+  });
+  add('get', '/classes', {
+    tag: 'کلاس‌ها', summary: 'فهرست کلاس‌ها با جلسه‌های اخیر',
+    ok: { code: 200, description: 'آرایه‌ی کلاس‌ها' }, errors: AUTHED,
+  });
+  add('post', '/classes', {
+    tag: 'کلاس‌ها', summary: 'ساخت کلاس (فقط مدیر)', body: 'createClass',
+    description: 'نام یکتا در باشگاه؛ مربی باید فعال باشد.',
+    ok: { code: 201, description: 'ساخته شد' }, errors: [...AUTHED, 400, 404, 409],
+  });
+  add('patch', '/classes/{id}', {
+    tag: 'کلاس‌ها', summary: 'ویرایش کلاس (فقط مدیر)', body: 'updateClass',
+    ok: { code: 200, description: 'ویرایش شد' }, errors: [...AUTHED, 400, 404],
+  });
+  add('post', '/classes/{id}/sessions', {
+    tag: 'کلاس‌ها', summary: 'تعریف جلسه (فقط مدیر)', body: 'createSession',
+    description: 'startsAt با آفست تایم‌زون (مثل 2026-11-25T18:00:00+03:30).',
+    ok: { code: 201, description: 'جلسه ساخته شد' }, errors: [...AUTHED, 400, 404],
+  });
+  add('get', '/classes/{id}/sessions', {
+    tag: 'کلاس‌ها', summary: 'جلسه‌های کلاس با ظرفیت پرشده',
+    ok: { code: 200, description: 'جلسه‌ها' }, errors: [...AUTHED, 404],
+  });
+  add('get', '/classes/{id}/bookings', {
+    tag: 'کلاس‌ها', summary: 'رزروهای جلسه', description: 'شناسه‌ی جلسه؛ شامل فهرست انتظار.',
+    ok: { code: 200, schema: 'SessionBookings', description: 'رزروها' }, errors: [...AUTHED, 404],
+  });
+  add('post', '/classes/{id}/bookings', {
+    tag: 'کلاس‌ها', summary: 'رزرو عضو در جلسه', body: 'bookMember',
+    description: 'ظرفیت پر → وضعیت WAITLIST. رزرو فعال قبلی: ۴۰۹ ALREADY_BOOKED.',
+    ok: { code: 201, schema: 'BookingResult', description: 'رزرو شد' }, errors: [...AUTHED, 400, 404, 409],
+  });
+  add('patch', '/bookings/{id}', {
+    tag: 'کلاس‌ها', summary: 'تغییر وضعیت رزرو', body: 'bookingUpdate',
+    description: 'لغو رزروی که جای پرکرده، اولین نفر فهرست انتظار را ارتقا می‌دهد (promotedId).',
+    ok: { code: 200, schema: 'BookingUpdateResult', description: 'به‌روزرسانی شد' }, errors: [...AUTHED, 400, 404],
   });
 
   add('get', '/leads', {

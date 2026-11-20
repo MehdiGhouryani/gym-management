@@ -4,6 +4,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AuthModule } from './auth/auth.module';
 import { AttendanceModule } from './attendance/attendance.module';
+import { ClassesModule } from './classes/classes.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { LeadsModule } from './leads/leads.module';
 import { GymModule } from './gym/gym.module';
@@ -27,6 +28,7 @@ import { PrismaModule } from './prisma.module';
     NotificationsModule,
     LeadsModule,
     AttendanceModule,
+    ClassesModule,
     PlansModule,
     SubscriptionsModule,
     ReportsModule,
