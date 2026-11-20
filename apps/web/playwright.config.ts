@@ -14,7 +14,8 @@ export default defineConfig({
   expect: { timeout: 10_000 },
   fullyParallel: false,
   retries: process.env.CI ? 1 : 0,
-  reporter: process.env.CI ? 'line' : 'list',
+  // گزارشگر github: خطای هر تست به‌صورت annotation در CI قابل خواندن است
+  reporter: process.env.CI ? [['line'], ['github']] : 'list',
   use: {
     baseURL: 'http://localhost:3000',
     trace: 'retain-on-failure',
@@ -39,7 +40,7 @@ export default defineConfig({
     },
     {
       command: 'pnpm start',
-      url: 'http://localhost:3000/api',
+      url: 'http://localhost:3000',
       reuseExistingServer: !process.env.CI,
       timeout: 60_000,
     },
