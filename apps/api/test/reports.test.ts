@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { aggregatePayments, computeRenewalRate, percentChange } from '../src/reports/report-logic.ts';
+import { aggregatePayments, computeRenewalRate, percentChange, planBreakdown, staffPerformance } from '../src/reports/report-logic.ts';
 
 const MEHR = { from: '2026-09-23', to: '2026-10-22' };
 const pay = (amount: number, method: string, iso: string) => ({ amount, method, paidAt: new Date(iso) });
@@ -82,5 +82,38 @@ describe('computeRenewalRate', () => {
   it('آخرین روز مهلت هنوز pending است', () => {
     expect(computeRenewalRate([{ memberId: 'a', endsOn: '2026-10-10' }], [], '2026-10-24', 14).pending).toBe(1);
     expect(computeRenewalRate([{ memberId: 'a', endsOn: '2026-10-10' }], [], '2026-10-25', 14).lost).toBe(1);
+  });
+});
+
+describe('عملکرد پلن‌ها', () => {
+  it('شمارش، درآمد و سهم درصدی', () => {
+    const r = planBreakdown([
+      { planId: 'a', planName: 'یک‌ماهه', price: 450 },
+      { planId: 'a', planName: 'یک‌ماهه', price: 450 },
+      { planId: 'b', planName: 'سه‌ماهه', price: 1200 },
+    ]);
+    expect(r.total).toBe(3);
+    expect(r.items[0].count).toBe(2);
+    expect(r.items[0].sharePercent).toBe(67);
+    expect(r.items[1].revenue).toBe(1200);
+  });
+  it('دوره خالی', () => {
+    expect(planBreakdown([])).toEqual({ items: [], total: 0 });
+  });
+});
+
+describe('عملکرد کارکنان', () => {
+  it('تمدید و پرداخت به تفکیک کارمند و مرتب‌سازی بر اساس وصولی', () => {
+    const r = staffPerformance([
+      { actorId: 's1', action: 'subscription.create', meta: { price: 450 } },
+      { actorId: 's1', action: 'payment.debt', meta: { amount: 100 } },
+      { actorId: 's2', action: 'subscription.create', meta: { price: 1200 } },
+      { actorId: 's2', action: 'member.archive', meta: null },
+    ]);
+    expect(r.length).toBe(2);
+    expect(r[0].actorId).toBe('s2');
+    expect(r[1].renewals).toBe(1);
+    expect(r[1].payments).toBe(1);
+    expect(r[1].collected).toBe(550);
   });
 });

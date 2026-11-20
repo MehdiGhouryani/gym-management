@@ -44,6 +44,17 @@ export interface MemberTimeline {
   items: { id: string; action: string; at: string; meta: Record<string, unknown> | null }[];
 }
 
+export interface PlanStats {
+  period: { year: number; month: number; monthName: string };
+  items: { planId: string; planName: string; count: number; revenue: number; sharePercent: number }[];
+  total: number;
+}
+
+export interface StaffReport {
+  period: { year: number; month: number; monthName: string };
+  items: { actorId: string; name: string; renewals: number; payments: number; collected: number }[];
+}
+
 export interface MemberPage {
   items: Member[];
   total: number;

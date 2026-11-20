@@ -122,6 +122,10 @@ export const monthlyReportQuerySchema = z
   })
   .refine((v) => (v.year === undefined) === (v.month === undefined), 'سال و ماه را با هم بفرستید');
 
+export const annualReportQuerySchema = z.object({
+  year: z.coerce.number().int().min(1302).max(1500),
+});
+
 // ---------- اشتراک و پرداخت ----------
 const tomanSchema = z.number().int().min(0).max(2_000_000_000);
 
@@ -199,6 +203,7 @@ export type UpdatePlanInput = z.infer<typeof updatePlanSchema>;
 export type ListPlansQuery = z.infer<typeof listPlansQuerySchema>;
 export type ReportQuery = z.infer<typeof reportQuerySchema>;
 export type MonthlyReportQuery = z.infer<typeof monthlyReportQuerySchema>;
+export type AnnualReportQuery = z.infer<typeof annualReportQuerySchema>;
 export type RenewInput = z.infer<typeof renewSchema>;
 export type PayDebtInput = z.infer<typeof payDebtSchema>;
 export type GymUpdateInput = z.infer<typeof gymUpdateSchema>;

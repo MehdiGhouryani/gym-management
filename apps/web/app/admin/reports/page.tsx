@@ -1,6 +1,5 @@
-import { EmptyState } from '../../../src/ui/index';
+import { ReportsView } from '../../../src/features/reports-view';
 
-/** در فاز ۷ با داشبورد و در فاز ۲۱ با گزارش‌های پیشرفته جایگزین می‌شود */
-export default function ReportsPlaceholder() {
-  return <EmptyState title="گزارش‌ها" hint="این بخش در فازهای بعد تکمیل می‌شود." />;
+export default function ReportsPage() {
+  return <ReportsView />;
 }

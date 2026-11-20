@@ -68,3 +68,42 @@ export function computeRenewalRate(
   const decided = renewed + lost;
   return { total: ended.length, renewed, lost, pending, rate: decided === 0 ? null : Math.round((renewed / decided) * 100) };
 }
+
+/** عملکرد پلن‌ها در یک دوره: اشتراک‌های شروع‌شده در دوره به تفکیک پلن */
+export function planBreakdown(
+  subs: { planId: string; planName: string; price: number }[],
+): { items: { planId: string; planName: string; count: number; revenue: number; sharePercent: number }[]; total: number } {
+  const map = new Map<string, { planId: string; planName: string; count: number; revenue: number }>();
+  for (const s of subs) {
+    const cur = map.get(s.planId) ?? { planId: s.planId, planName: s.planName, count: 0, revenue: 0 };
+    cur.count++;
+    cur.revenue += s.price;
+    map.set(s.planId, cur);
+  }
+  const total = subs.length;
+  const items = [...map.values()]
+    .sort((a, b) => b.count - a.count)
+    .map((x) => ({ ...x, sharePercent: total === 0 ? 0 : Math.round((x.count / total) * 100) }));
+  return { items, total };
+}
+
+/** عملکرد کارکنان از لاگ ممیزی: تعداد تمدید و پرداخت ثبت‌شده به تفکیک کارمند */
+export function staffPerformance(
+  events: { actorId: string; action: string; meta: { price?: number; amount?: number } | null }[],
+): { actorId: string; renewals: number; payments: number; collected: number }[] {
+  const map = new Map<string, { actorId: string; renewals: number; payments: number; collected: number }>();
+  for (const e of events) {
+    const cur = map.get(e.actorId) ?? { actorId: e.actorId, renewals: 0, payments: 0, collected: 0 };
+    if (e.action === 'subscription.create') {
+      cur.renewals++;
+      cur.collected += e.meta?.price ?? 0;
+    } else if (e.action === 'payment.debt') {
+      cur.payments++;
+      cur.collected += e.meta?.amount ?? 0;
+    } else {
+      continue;
+    }
+    map.set(e.actorId, cur);
+  }
+  return [...map.values()].sort((a, b) => b.collected - a.collected);
+}

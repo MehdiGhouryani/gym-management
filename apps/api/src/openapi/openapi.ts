@@ -191,6 +191,20 @@ function componentSchemas(bodies: BodySchemas): Record<string, unknown> {
       total: int(), page: int(), limit: int(), pages: int(),
       sum: int({ description: 'جمع پرداخت‌های دوره‌ی فیلترشده' }),
     }),
+    AnnualReport: obj({
+      year: int(),
+      months: { type: 'array', items: obj({ month: int(), monthName: str(), revenue: int(), paymentCount: int(), newInMonth: int() }) },
+      totals: obj({ revenue: int(), paymentCount: int(), newMembers: int() }),
+    }),
+    PlanStats: obj({
+      period: obj({ year: int(), month: int(), monthName: str() }),
+      items: { type: 'array', items: obj({ planId: uuid, planName: str(), count: int(), revenue: int(), sharePercent: int() }) },
+      total: int(),
+    }),
+    StaffStats: obj({
+      period: obj({ year: int(), month: int(), monthName: str() }),
+      items: { type: 'array', items: obj({ actorId: uuid, name: str(), renewals: int(), payments: int(), collected: int() }) },
+    }),
     Dashboard: obj({
       kpis: obj({
         activeMembers: int({ description: 'اعضای بایگانی‌نشده با اشتراک معتبر امروز' }),
@@ -471,6 +485,27 @@ export function buildOpenApi(bodies: BodySchemas) {
       { name: 'month', schema: int({ minimum: 1, maximum: 12 }) },
     ],
     ok: { code: 200, schema: 'MonthlyReport', description: 'گزارش' }, errors: [...AUTHED, 400],
+  });
+  add('get', '/reports/annual', {
+    tag: 'گزارش', summary: 'گزارش سالانه (فقط مدیر)', description: '۱۲ ماه شمسی: درآمد، تعداد پرداخت و عضو جدید.',
+    query: [{ name: 'year', schema: int({ minimum: 1302, maximum: 1500 }) }],
+    ok: { code: 200, schema: 'AnnualReport', description: 'گزارش سالانه' }, errors: [...AUTHED, 400],
+  });
+  add('get', '/reports/plans', {
+    tag: 'گزارش', summary: 'عملکرد پلن‌ها (فقط مدیر)', description: 'اشتراک‌های شروع‌شده در ماه به تفکیک پلن با سهم درصدی.',
+    query: [
+      { name: 'year', schema: int({ minimum: 1302, maximum: 1500 }) },
+      { name: 'month', schema: int({ minimum: 1, maximum: 12 }) },
+    ],
+    ok: { code: 200, schema: 'PlanStats', description: 'عملکرد پلن‌ها' }, errors: [...AUTHED, 400],
+  });
+  add('get', '/reports/staff', {
+    tag: 'گزارش', summary: 'عملکرد کارکنان (فقط مدیر)', description: 'تعداد تمدید و پرداخت ثبت‌شده و مبلغ وصولی به تفکیک کارمند، از لاگ ممیزی.',
+    query: [
+      { name: 'year', schema: int({ minimum: 1302, maximum: 1500 }) },
+      { name: 'month', schema: int({ minimum: 1, maximum: 12 }) },
+    ],
+    ok: { code: 200, schema: 'StaffStats', description: 'عملکرد کارکنان' }, errors: [...AUTHED, 400],
   });
 
   return {
